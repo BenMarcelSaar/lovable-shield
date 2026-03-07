@@ -30,6 +30,7 @@ const FileScanner = () => {
   const [urlInput, setUrlInput] = useState("");
   const [results, setResults] = useState<ScanResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [blockedResult, setBlockedResult] = useState<ScanResult | null>(null);
 
   const stats = useMemo(() => {
     const total = results.length;
