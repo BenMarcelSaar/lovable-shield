@@ -5,6 +5,7 @@ import {
   Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import BlockScreen from "./BlockScreen";
 
 interface ScanResult {
   name: string;
