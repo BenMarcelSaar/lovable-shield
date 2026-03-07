@@ -163,6 +163,27 @@ const FileScanner = () => {
           <p className="text-muted-foreground text-xs font-mono tracking-[0.3em] mt-2">
             REAL-TIME THREAT ANALYSIS • POWERED BY VIRUSTOTAL
           </p>
+
+          {/* Safe Browsing Toggle */}
+          <div className="mt-4 inline-flex items-center gap-3 bg-card border border-border rounded-lg px-4 py-2">
+            <Shield className={`w-4 h-4 ${safeBrowsing ? "text-primary" : "text-muted-foreground"}`} />
+            <span className="text-xs font-mono text-foreground">SAFE BROWSING</span>
+            <button
+              onClick={() => setSafeBrowsing(!safeBrowsing)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${
+                safeBrowsing ? "bg-primary" : "bg-secondary"
+              }`}
+            >
+              <motion.div
+                animate={{ x: safeBrowsing ? 20 : 2 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="absolute top-0.5 w-4 h-4 rounded-full bg-primary-foreground"
+              />
+            </button>
+            <span className={`text-[10px] font-mono tracking-wider ${safeBrowsing ? "text-primary" : "text-muted-foreground"}`}>
+              {safeBrowsing ? "AN" : "AUS"}
+            </span>
+          </div>
         </motion.div>
 
         {/* Stats Bar */}
