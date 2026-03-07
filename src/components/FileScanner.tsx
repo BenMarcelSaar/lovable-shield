@@ -268,7 +268,7 @@ const FileScanner = () => {
                   className="px-6 py-3 bg-primary text-primary-foreground rounded-md font-mono text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                   {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                  SCAN
+                  SICHER ÖFFNEN
                 </button>
               </div>
               {scanning && (
