@@ -84,13 +84,22 @@ const FileScanner = () => {
 
   const scanUrl = useCallback(async () => {
     if (!urlInput.trim()) return;
+    const targetUrl = urlInput.trim();
+
+    // If Safe Browsing is off, just open directly
+    if (!safeBrowsing) {
+      window.open(targetUrl, "_blank", "noopener,noreferrer");
+      setUrlInput("");
+      return;
+    }
+
     setScanning(true);
-    setScanTarget(urlInput);
+    setScanTarget(targetUrl);
     setError(null);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("scan", {
-        body: { type: "url", url: urlInput.trim() },
+        body: { type: "url", url: targetUrl },
       });
 
       if (fnError) throw new Error(fnError.message);
@@ -101,11 +110,9 @@ const FileScanner = () => {
       setUrlInput("");
       
       if (scanResult.status === "threat") {
-        // Block dangerous site
         setBlockedResult(scanResult);
       } else if (scanResult.status === "clean") {
-        // Safe → auto-open
-        window.open(urlInput.trim(), "_blank", "noopener,noreferrer");
+        window.open(targetUrl, "_blank", "noopener,noreferrer");
       }
     } catch (err: any) {
       setError(err.message || "Scan failed");
@@ -113,7 +120,7 @@ const FileScanner = () => {
       setScanning(false);
       setScanTarget("");
     }
-  }, [urlInput]);
+  }, [urlInput, safeBrowsing]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
