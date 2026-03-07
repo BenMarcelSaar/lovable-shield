@@ -31,6 +31,7 @@ const FileScanner = () => {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [blockedResult, setBlockedResult] = useState<ScanResult | null>(null);
+  const [safeBrowsing, setSafeBrowsing] = useState(true);
 
   const stats = useMemo(() => {
     const total = results.length;
@@ -83,13 +84,22 @@ const FileScanner = () => {
 
   const scanUrl = useCallback(async () => {
     if (!urlInput.trim()) return;
+    const targetUrl = urlInput.trim();
+
+    // If Safe Browsing is off, just open directly
+    if (!safeBrowsing) {
+      window.open(targetUrl, "_blank", "noopener,noreferrer");
+      setUrlInput("");
+      return;
+    }
+
     setScanning(true);
-    setScanTarget(urlInput);
+    setScanTarget(targetUrl);
     setError(null);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("scan", {
-        body: { type: "url", url: urlInput.trim() },
+        body: { type: "url", url: targetUrl },
       });
 
       if (fnError) throw new Error(fnError.message);
@@ -100,11 +110,9 @@ const FileScanner = () => {
       setUrlInput("");
       
       if (scanResult.status === "threat") {
-        // Block dangerous site
         setBlockedResult(scanResult);
       } else if (scanResult.status === "clean") {
-        // Safe → auto-open
-        window.open(urlInput.trim(), "_blank", "noopener,noreferrer");
+        window.open(targetUrl, "_blank", "noopener,noreferrer");
       }
     } catch (err: any) {
       setError(err.message || "Scan failed");
@@ -112,7 +120,7 @@ const FileScanner = () => {
       setScanning(false);
       setScanTarget("");
     }
-  }, [urlInput]);
+  }, [urlInput, safeBrowsing]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -162,6 +170,27 @@ const FileScanner = () => {
           <p className="text-muted-foreground text-xs font-mono tracking-[0.3em] mt-2">
             REAL-TIME THREAT ANALYSIS • POWERED BY VIRUSTOTAL
           </p>
+
+          {/* Safe Browsing Toggle */}
+          <div className="mt-4 inline-flex items-center gap-3 bg-card border border-border rounded-lg px-4 py-2">
+            <Shield className={`w-4 h-4 ${safeBrowsing ? "text-primary" : "text-muted-foreground"}`} />
+            <span className="text-xs font-mono text-foreground">SAFE BROWSING</span>
+            <button
+              onClick={() => setSafeBrowsing(!safeBrowsing)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${
+                safeBrowsing ? "bg-primary" : "bg-secondary"
+              }`}
+            >
+              <motion.div
+                animate={{ x: safeBrowsing ? 20 : 2 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="absolute top-0.5 w-4 h-4 rounded-full bg-primary-foreground"
+              />
+            </button>
+            <span className={`text-[10px] font-mono tracking-wider ${safeBrowsing ? "text-primary" : "text-muted-foreground"}`}>
+              {safeBrowsing ? "AN" : "AUS"}
+            </span>
+          </div>
         </motion.div>
 
         {/* Stats Bar */}
