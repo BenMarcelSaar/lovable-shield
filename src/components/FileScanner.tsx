@@ -99,9 +99,12 @@ const FileScanner = () => {
       setResults(prev => [scanResult, ...prev]);
       setUrlInput("");
       
-      // Block if threat detected
       if (scanResult.status === "threat") {
+        // Block dangerous site
         setBlockedResult(scanResult);
+      } else if (scanResult.status === "clean") {
+        // Safe → auto-open
+        window.open(urlInput.trim(), "_blank", "noopener,noreferrer");
       }
     } catch (err: any) {
       setError(err.message || "Scan failed");
