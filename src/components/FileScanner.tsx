@@ -95,8 +95,14 @@ const FileScanner = () => {
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
 
-      setResults(prev => [{ ...data, scannedAt: new Date().toLocaleTimeString() }, ...prev]);
+      const scanResult = { ...data, scannedAt: new Date().toLocaleTimeString() };
+      setResults(prev => [scanResult, ...prev]);
       setUrlInput("");
+      
+      // Block if threat detected
+      if (scanResult.status === "threat") {
+        setBlockedResult(scanResult);
+      }
     } catch (err: any) {
       setError(err.message || "Scan failed");
     } finally {
