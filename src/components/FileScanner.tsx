@@ -257,7 +257,7 @@ const FileScanner = () => {
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && !scanning && scanUrl()}
-                    placeholder="https://example.com"
+                    placeholder="URL eingeben zum sicheren Öffnen..."
                     disabled={scanning}
                     className="w-full bg-secondary border border-border rounded-md pl-10 pr-4 py-3 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50"
                   />
