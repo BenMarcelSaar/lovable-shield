@@ -5,6 +5,7 @@ import {
   Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import BlockScreen from "./BlockScreen";
 
 interface ScanResult {
   name: string;
@@ -29,6 +30,7 @@ const FileScanner = () => {
   const [urlInput, setUrlInput] = useState("");
   const [results, setResults] = useState<ScanResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [blockedResult, setBlockedResult] = useState<ScanResult | null>(null);
 
   const stats = useMemo(() => {
     const total = results.length;
@@ -93,8 +95,14 @@ const FileScanner = () => {
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
 
-      setResults(prev => [{ ...data, scannedAt: new Date().toLocaleTimeString() }, ...prev]);
+      const scanResult = { ...data, scannedAt: new Date().toLocaleTimeString() };
+      setResults(prev => [scanResult, ...prev]);
       setUrlInput("");
+      
+      // Block if threat detected
+      if (scanResult.status === "threat") {
+        setBlockedResult(scanResult);
+      }
     } catch (err: any) {
       setError(err.message || "Scan failed");
     } finally {
@@ -403,6 +411,23 @@ const FileScanner = () => {
           POWERED BY VIRUSTOTAL API • FILE HASHES NEVER LEAVE YOUR BROWSER
         </motion.p>
       </div>
+
+      {/* Block Screen Overlay */}
+      <AnimatePresence>
+        {blockedResult && (
+          <BlockScreen
+            url={blockedResult.name}
+            threats={blockedResult.threats}
+            malicious={blockedResult.malicious + blockedResult.suspicious}
+            totalEngines={blockedResult.totalEngines}
+            onClose={() => setBlockedResult(null)}
+            onProceedAnyway={() => {
+              setBlockedResult(null);
+              window.open(blockedResult.name, "_blank");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
