@@ -99,9 +99,12 @@ const FileScanner = () => {
       setResults(prev => [scanResult, ...prev]);
       setUrlInput("");
       
-      // Block if threat detected
       if (scanResult.status === "threat") {
+        // Block dangerous site
         setBlockedResult(scanResult);
+      } else if (scanResult.status === "clean") {
+        // Safe → auto-open
+        window.open(urlInput.trim(), "_blank", "noopener,noreferrer");
       }
     } catch (err: any) {
       setError(err.message || "Scan failed");
@@ -254,7 +257,7 @@ const FileScanner = () => {
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && !scanning && scanUrl()}
-                    placeholder="https://example.com"
+                    placeholder="URL eingeben zum sicheren Öffnen..."
                     disabled={scanning}
                     className="w-full bg-secondary border border-border rounded-md pl-10 pr-4 py-3 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50"
                   />
@@ -265,12 +268,12 @@ const FileScanner = () => {
                   className="px-6 py-3 bg-primary text-primary-foreground rounded-md font-mono text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                   {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                  SCAN
+                  SICHER ÖFFNEN
                 </button>
               </div>
               {scanning && (
                 <p className="text-muted-foreground text-xs font-mono mt-3">
-                  Submitting to VirusTotal... this may take a few seconds.
+                  Prüfe die URL... wenn sicher, wird sie automatisch geöffnet.
                 </p>
               )}
             </div>
