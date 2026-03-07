@@ -411,6 +411,23 @@ const FileScanner = () => {
           POWERED BY VIRUSTOTAL API • FILE HASHES NEVER LEAVE YOUR BROWSER
         </motion.p>
       </div>
+
+      {/* Block Screen Overlay */}
+      <AnimatePresence>
+        {blockedResult && (
+          <BlockScreen
+            url={blockedResult.name}
+            threats={blockedResult.threats}
+            malicious={blockedResult.malicious + blockedResult.suspicious}
+            totalEngines={blockedResult.totalEngines}
+            onClose={() => setBlockedResult(null)}
+            onProceedAnyway={() => {
+              setBlockedResult(null);
+              window.open(blockedResult.name, "_blank");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
