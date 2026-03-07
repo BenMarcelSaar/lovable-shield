@@ -273,7 +273,7 @@ const FileScanner = () => {
               </div>
               {scanning && (
                 <p className="text-muted-foreground text-xs font-mono mt-3">
-                  Submitting to VirusTotal... this may take a few seconds.
+                  Prüfe die URL... wenn sicher, wird sie automatisch geöffnet.
                 </p>
               )}
             </div>
