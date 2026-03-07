@@ -82,44 +82,20 @@ const FileScanner = () => {
     }
   }, []);
 
-  const scanUrl = useCallback(async () => {
+  const scanUrl = useCallback(() => {
     if (!urlInput.trim()) return;
     const targetUrl = urlInput.trim();
 
-    // If Safe Browsing is off, just open directly
     if (!safeBrowsing) {
       window.open(targetUrl, "_blank", "noopener,noreferrer");
       setUrlInput("");
       return;
     }
 
-    setScanning(true);
-    setScanTarget(targetUrl);
-    setError(null);
-
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("scan", {
-        body: { type: "url", url: targetUrl },
-      });
-
-      if (fnError) throw new Error(fnError.message);
-      if (data?.error) throw new Error(data.error);
-
-      const scanResult = { ...data, scannedAt: new Date().toLocaleTimeString() };
-      setResults(prev => [scanResult, ...prev]);
-      setUrlInput("");
-      
-      if (scanResult.status === "threat") {
-        setBlockedResult(scanResult);
-      } else if (scanResult.status === "clean") {
-        window.open(targetUrl, "_blank", "noopener,noreferrer");
-      }
-    } catch (err: any) {
-      setError(err.message || "Scan failed");
-    } finally {
-      setScanning(false);
-      setScanTarget("");
-    }
+    // Redirect to the safe-check loading page
+    const checkUrl = `/check?url=${encodeURIComponent(targetUrl)}`;
+    window.open(checkUrl, "_blank");
+    setUrlInput("");
   }, [urlInput, safeBrowsing]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
