@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Shield, AlertTriangle, CheckCircle, FileText, X, Loader2,
-  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash
+  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash, BookOpen
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import BlockScreen from "./BlockScreen";
