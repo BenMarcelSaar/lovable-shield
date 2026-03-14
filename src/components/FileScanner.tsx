@@ -24,6 +24,7 @@ interface ScanResult {
 }
 
 const FileScanner = () => {
+  const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanTarget, setScanTarget] = useState<string>("");
