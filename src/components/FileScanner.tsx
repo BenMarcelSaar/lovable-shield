@@ -161,7 +161,6 @@ const FileScanner = () => {
             <BookOpen className="w-3.5 h-3.5" />
             HANDBUCH & TUTORIALS
           </button>
-          </p>
 
           {/* Safe Browsing Toggle */}
           <div className="mt-4 inline-flex items-center gap-3 bg-card border border-border rounded-lg px-4 py-2">
