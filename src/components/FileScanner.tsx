@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Shield, AlertTriangle, CheckCircle, FileText, X, Loader2,
-  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash
+  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash, BookOpen
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import BlockScreen from "./BlockScreen";
@@ -23,6 +24,7 @@ interface ScanResult {
 }
 
 const FileScanner = () => {
+  const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanTarget, setScanTarget] = useState<string>("");
@@ -82,9 +84,15 @@ const FileScanner = () => {
     }
   }, []);
 
+  const normalizeUrl = (input: string) => {
+    let u = input.trim();
+    if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+    return u;
+  };
+
   const scanUrl = useCallback(() => {
     if (!urlInput.trim()) return;
-    const targetUrl = urlInput.trim();
+    const targetUrl = normalizeUrl(urlInput);
 
     if (!safeBrowsing) {
       window.open(targetUrl, "_blank", "noopener,noreferrer");
@@ -145,6 +153,15 @@ const FileScanner = () => {
           <p className="text-muted-foreground text-xs font-mono tracking-[0.3em] mt-2">
             REAL-TIME THREAT ANALYSIS • POWERED BY VIRUSTOTAL
           </p>
+
+          {/* Tutorial link */}
+          <button
+            onClick={() => navigate("/tutorial")}
+            className="mt-3 inline-flex items-center gap-2 text-primary/70 hover:text-primary transition-colors font-mono text-xs"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            HANDBUCH & TUTORIALS
+          </button>
 
           {/* Safe Browsing Toggle */}
           <div className="mt-4 inline-flex items-center gap-3 bg-card border border-border rounded-lg px-4 py-2">
