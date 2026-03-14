@@ -153,6 +153,16 @@ const FileScanner = () => {
             REAL-TIME THREAT ANALYSIS • POWERED BY VIRUSTOTAL
           </p>
 
+          {/* Tutorial link */}
+          <button
+            onClick={() => navigate("/tutorial")}
+            className="mt-3 inline-flex items-center gap-2 text-primary/70 hover:text-primary transition-colors font-mono text-xs"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            HANDBUCH & TUTORIALS
+          </button>
+          </p>
+
           {/* Safe Browsing Toggle */}
           <div className="mt-4 inline-flex items-center gap-3 bg-card border border-border rounded-lg px-4 py-2">
             <Shield className={`w-4 h-4 ${safeBrowsing ? "text-primary" : "text-muted-foreground"}`} />
