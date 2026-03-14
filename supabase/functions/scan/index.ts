@@ -92,6 +92,8 @@ serve(async (req) => {
         headers: { 'x-apikey': VIRUSTOTAL_API_KEY },
       });
 
+      const hashText = await hashRes.text();
+
       if (hashRes.status === 404) {
         result = {
           name: fileName || fileHash,
@@ -107,7 +109,12 @@ serve(async (req) => {
           message: 'File not found in VirusTotal database. Upload it to virustotal.com for a full scan.',
         };
       } else {
-        const hashData = await hashRes.json();
+        let hashData;
+        try {
+          hashData = JSON.parse(hashText);
+        } catch {
+          throw new Error(`VirusTotal file lookup returned non-JSON response (${hashRes.status}).`);
+        }
         if (!hashRes.ok) {
           throw new Error(`VT file lookup failed [${hashRes.status}]: ${JSON.stringify(hashData)}`);
         }
