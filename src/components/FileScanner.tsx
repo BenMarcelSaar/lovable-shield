@@ -82,9 +82,15 @@ const FileScanner = () => {
     }
   }, []);
 
+  const normalizeUrl = (input: string) => {
+    let u = input.trim();
+    if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+    return u;
+  };
+
   const scanUrl = useCallback(() => {
     if (!urlInput.trim()) return;
-    const targetUrl = urlInput.trim();
+    const targetUrl = normalizeUrl(urlInput);
 
     if (!safeBrowsing) {
       window.open(targetUrl, "_blank", "noopener,noreferrer");

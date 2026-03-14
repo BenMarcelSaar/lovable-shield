@@ -8,7 +8,8 @@ type CheckState = "scanning" | "safe" | "danger";
 
 const SafeCheck = () => {
   const [searchParams] = useSearchParams();
-  const url = searchParams.get("url") || "";
+  const rawUrl = searchParams.get("url") || "";
+  const url = rawUrl && !/^https?:\/\//i.test(rawUrl) ? "https://" + rawUrl : rawUrl;
   const [state, setState] = useState<CheckState>("scanning");
   const [progress, setProgress] = useState(0);
   const [threatCount, setThreatCount] = useState(0);
