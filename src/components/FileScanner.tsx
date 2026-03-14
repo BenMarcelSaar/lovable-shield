@@ -94,8 +94,7 @@ const FileScanner = () => {
 
     // Redirect to the safe-check loading page
     const checkUrl = `/check?url=${encodeURIComponent(targetUrl)}`;
-    window.open(checkUrl, "_blank");
-    setUrlInput("");
+    window.location.href = checkUrl;
   }, [urlInput, safeBrowsing]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
