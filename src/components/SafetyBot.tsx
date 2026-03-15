@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+
+type Msg = { role: "user" | "assistant"; content: string };
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/safety-chat`;
+const BAN_KEY = "sentinel_ban_until";
 
 const RobotFace = ({ size = 28, className = "" }: { size?: number; className?: string }) => {
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
@@ -23,40 +29,28 @@ const RobotFace = ({ size = 28, className = "" }: { size?: number; className?: s
 
   return (
     <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className={className}>
-      {/* Head */}
       <rect x={s*0.15} y={s*0.2} width={s*0.7} height={s*0.65} rx={s*0.12} fill="currentColor" opacity={0.85} />
-      {/* Antenna */}
       <line x1={s*0.5} y1={s*0.2} x2={s*0.5} y2={s*0.08} stroke="currentColor" strokeWidth={s*0.04} strokeLinecap="round" />
       <circle cx={s*0.5} cy={s*0.06} r={s*0.04} fill="currentColor" />
-      {/* Ears */}
       <rect x={s*0.06} y={s*0.38} width={s*0.1} height={s*0.2} rx={s*0.04} fill="currentColor" opacity={0.7} />
       <rect x={s*0.84} y={s*0.38} width={s*0.1} height={s*0.2} rx={s*0.04} fill="currentColor" opacity={0.7} />
-      {/* Eye sockets */}
       <ellipse cx={s*0.36} cy={s*0.46} rx={eyeR} ry={eyeR} fill="hsl(var(--background))" />
       <ellipse cx={s*0.64} cy={s*0.46} rx={eyeR} ry={eyeR} fill="hsl(var(--background))" />
-      {/* Pupils (move with mouse) */}
       <circle cx={s*0.36 + eyeOffset.x} cy={s*0.46 + eyeOffset.y} r={pupilR} fill="hsl(var(--primary))">
         <animate attributeName="r" values={`${pupilR};${pupilR*1.2};${pupilR}`} dur="3s" repeatCount="indefinite" />
       </circle>
       <circle cx={s*0.64 + eyeOffset.x} cy={s*0.46 + eyeOffset.y} r={pupilR} fill="hsl(var(--primary))">
         <animate attributeName="r" values={`${pupilR};${pupilR*1.2};${pupilR}`} dur="3s" repeatCount="indefinite" />
       </circle>
-      {/* Mouth */}
       <rect x={s*0.35} y={s*0.62} width={s*0.3} height={s*0.06} rx={s*0.03} fill="hsl(var(--background))" opacity={0.8} />
-      {/* Mouth lines */}
       <line x1={s*0.42} y1={s*0.62} x2={s*0.42} y2={s*0.68} stroke="currentColor" strokeWidth={s*0.015} opacity={0.3} />
       <line x1={s*0.5} y1={s*0.62} x2={s*0.5} y2={s*0.68} stroke="currentColor" strokeWidth={s*0.015} opacity={0.3} />
       <line x1={s*0.58} y1={s*0.62} x2={s*0.58} y2={s*0.68} stroke="currentColor" strokeWidth={s*0.015} opacity={0.3} />
     </svg>
   );
 };
-import ReactMarkdown from "react-markdown";
 
-type Msg = { role: "user" | "assistant"; content: string };
-
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/safety-chat`;
-
-const SafetyBot = () => {
+const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -70,6 +64,13 @@ const SafetyBot = () => {
   const send = async () => {
     const text = input.trim();
     if (!text || isLoading) return;
+
+    // Check if currently banned
+    const banUntil = Number(localStorage.getItem(BAN_KEY) || 0);
+    if (banUntil > Date.now()) {
+      onBan?.(banUntil);
+      return;
+    }
 
     const userMsg: Msg = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
@@ -101,9 +102,27 @@ const SafetyBot = () => {
         body: JSON.stringify({ messages: [...messages, userMsg] }),
       });
 
+      // Check for block response (JSON, not stream)
+      const contentType = resp.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await resp.json();
+        if (data.blocked) {
+          const until = Date.now() + 5 * 60 * 1000;
+          localStorage.setItem(BAN_KEY, String(until));
+          setOpen(false);
+          onBan?.(until);
+          // Remove the offensive message
+          setMessages((prev) => prev.slice(0, -1));
+          return;
+        }
+        if (data.error) {
+          upsertAssistant(`❌ ${data.error}`);
+          return;
+        }
+      }
+
       if (!resp.ok || !resp.body) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || "Fehler bei der KI-Anfrage");
+        throw new Error("Fehler bei der KI-Anfrage");
       }
 
       const reader = resp.body.getReader();
@@ -126,10 +145,7 @@ const SafetyBot = () => {
           if (!line.startsWith("data: ")) continue;
 
           const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
+          if (jsonStr === "[DONE]") { streamDone = true; break; }
 
           try {
             const parsed = JSON.parse(jsonStr);
@@ -142,7 +158,6 @@ const SafetyBot = () => {
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split("\n")) {
           if (!raw) continue;
@@ -168,7 +183,6 @@ const SafetyBot = () => {
 
   return (
     <>
-      {/* Floating robot button */}
       <motion.button
         onClick={() => setOpen(!open)}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
@@ -179,7 +193,6 @@ const SafetyBot = () => {
         {open ? <X className="w-6 h-6" /> : <RobotFace size={30} />}
       </motion.button>
 
-      {/* Chat window */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -188,7 +201,6 @@ const SafetyBot = () => {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[520px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Header */}
             <div className="bg-primary/10 border-b border-border px-4 py-3 flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary">
                 <RobotFace size={22} />
@@ -200,11 +212,12 @@ const SafetyBot = () => {
               <div className="ml-auto w-2 h-2 rounded-full bg-primary animate-pulse" />
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
               {messages.length === 0 && (
                 <div className="text-center pt-8">
-                  <div className="text-primary/30 mx-auto mb-3 w-12 h-12 flex items-center justify-center"><RobotFace size={48} /></div>
+                  <div className="text-primary/30 mx-auto mb-3 w-12 h-12 flex items-center justify-center">
+                    <RobotFace size={48} />
+                  </div>
                   <p className="text-muted-foreground text-sm font-mono">
                     Hallo! 👋 Ich bin Sentinel AI.
                   </p>
@@ -219,9 +232,7 @@ const SafetyBot = () => {
                     ].map((q) => (
                       <button
                         key={q}
-                        onClick={() => {
-                          setInput(q);
-                        }}
+                        onClick={() => setInput(q)}
                         className="block w-full text-left text-xs font-mono text-primary/80 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 hover:bg-primary/10 transition-colors"
                       >
                         {q}
@@ -265,7 +276,6 @@ const SafetyBot = () => {
               <div ref={bottomRef} />
             </div>
 
-            {/* Input */}
             <div className="border-t border-border p-3">
               <div className="flex gap-2">
                 <input
