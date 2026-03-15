@@ -176,7 +176,7 @@ const SafetyBot = () => {
         animate={open ? { rotate: 0 } : { rotate: [0, 10, -10, 0] }}
         transition={open ? {} : { duration: 2, repeat: Infinity, repeatDelay: 3 }}
       >
-        {open ? <X className="w-6 h-6" /> : <Bot className="w-7 h-7" />}
+        {open ? <X className="w-6 h-6" /> : <RobotFace size={30} />}
       </motion.button>
 
       {/* Chat window */}
