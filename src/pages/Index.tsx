@@ -1,11 +1,32 @@
+import { useState, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
 import FileScanner from "@/components/FileScanner";
 import SafetyBot from "@/components/SafetyBot";
+import UserBanScreen from "@/components/UserBanScreen";
+
+const BAN_KEY = "sentinel_ban_until";
 
 const Index = () => {
+  const [banUntil, setBanUntil] = useState(0);
+
+  useEffect(() => {
+    const stored = Number(localStorage.getItem(BAN_KEY) || 0);
+    if (stored > Date.now()) setBanUntil(stored);
+  }, []);
+
+  useEffect(() => {
+    if (banUntil <= Date.now()) return;
+    const timeout = setTimeout(() => setBanUntil(0), banUntil - Date.now());
+    return () => clearTimeout(timeout);
+  }, [banUntil]);
+
   return (
     <>
+      <AnimatePresence>
+        {banUntil > Date.now() && <UserBanScreen unblockTime={banUntil} />}
+      </AnimatePresence>
       <FileScanner />
-      <SafetyBot />
+      <SafetyBot onBan={(until) => setBanUntil(until)} />
     </>
   );
 };

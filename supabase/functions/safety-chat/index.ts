@@ -6,6 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Simple bad-word detection (German + English)
+const BAD_WORDS = [
+  "fick", "fck", "scheiße", "scheisse", "hurensohn", "wichser", "arschloch",
+  "missgeburt", "bastard", "hure", "fotze", "schwuchtel", "spast",
+  "fuck", "shit", "bitch", "asshole", "nigger", "faggot", "cunt",
+  "motherfucker", "dick", "pussy", "retard", "whore",
+  "nazi", "heil hitler", "sieg heil",
+  "ich bring dich um", "ich töte dich", "du sollst sterben",
+  "kill yourself", "kys",
+];
+
+function containsBadContent(text: string): boolean {
+  const lower = text.toLowerCase().replace(/[^a-zäöüß\s]/g, "");
+  return BAD_WORDS.some((w) => lower.includes(w));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -13,6 +29,22 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
+
+    // Check the latest user message for bad content
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+    if (lastUserMsg && containsBadContent(lastUserMsg.content)) {
+      return new Response(
+        JSON.stringify({
+          blocked: true,
+          reason: "Unangemessene Sprache erkannt. Du wirst für 5 Minuten gesperrt.",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
