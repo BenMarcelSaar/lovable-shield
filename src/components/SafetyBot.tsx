@@ -190,8 +190,8 @@ const SafetyBot = () => {
           >
             {/* Header */}
             <div className="bg-primary/10 border-b border-border px-4 py-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-primary" />
+              <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary">
+                <RobotFace size={22} />
               </div>
               <div>
                 <h3 className="font-bold font-mono text-foreground text-sm">SENTINEL AI</h3>
