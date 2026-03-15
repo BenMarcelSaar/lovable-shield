@@ -1,6 +1,55 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, Bot } from "lucide-react";
+import { X, Send, Loader2 } from "lucide-react";
+
+const RobotFace = ({ size = 28, className = "" }: { size?: number; className?: string }) => {
+  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const dx = (e.clientX - cx) / cx;
+      const dy = (e.clientY - cy) / cy;
+      setEyeOffset({ x: dx * 2.5, y: dy * 2 });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const s = size;
+  const eyeR = s * 0.09;
+  const pupilR = s * 0.05;
+
+  return (
+    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className={className}>
+      {/* Head */}
+      <rect x={s*0.15} y={s*0.2} width={s*0.7} height={s*0.65} rx={s*0.12} fill="currentColor" opacity={0.85} />
+      {/* Antenna */}
+      <line x1={s*0.5} y1={s*0.2} x2={s*0.5} y2={s*0.08} stroke="currentColor" strokeWidth={s*0.04} strokeLinecap="round" />
+      <circle cx={s*0.5} cy={s*0.06} r={s*0.04} fill="currentColor" />
+      {/* Ears */}
+      <rect x={s*0.06} y={s*0.38} width={s*0.1} height={s*0.2} rx={s*0.04} fill="currentColor" opacity={0.7} />
+      <rect x={s*0.84} y={s*0.38} width={s*0.1} height={s*0.2} rx={s*0.04} fill="currentColor" opacity={0.7} />
+      {/* Eye sockets */}
+      <ellipse cx={s*0.36} cy={s*0.46} rx={eyeR} ry={eyeR} fill="hsl(var(--background))" />
+      <ellipse cx={s*0.64} cy={s*0.46} rx={eyeR} ry={eyeR} fill="hsl(var(--background))" />
+      {/* Pupils (move with mouse) */}
+      <circle cx={s*0.36 + eyeOffset.x} cy={s*0.46 + eyeOffset.y} r={pupilR} fill="hsl(var(--primary))">
+        <animate attributeName="r" values={`${pupilR};${pupilR*1.2};${pupilR}`} dur="3s" repeatCount="indefinite" />
+      </circle>
+      <circle cx={s*0.64 + eyeOffset.x} cy={s*0.46 + eyeOffset.y} r={pupilR} fill="hsl(var(--primary))">
+        <animate attributeName="r" values={`${pupilR};${pupilR*1.2};${pupilR}`} dur="3s" repeatCount="indefinite" />
+      </circle>
+      {/* Mouth */}
+      <rect x={s*0.35} y={s*0.62} width={s*0.3} height={s*0.06} rx={s*0.03} fill="hsl(var(--background))" opacity={0.8} />
+      {/* Mouth lines */}
+      <line x1={s*0.42} y1={s*0.62} x2={s*0.42} y2={s*0.68} stroke="currentColor" strokeWidth={s*0.015} opacity={0.3} />
+      <line x1={s*0.5} y1={s*0.62} x2={s*0.5} y2={s*0.68} stroke="currentColor" strokeWidth={s*0.015} opacity={0.3} />
+      <line x1={s*0.58} y1={s*0.62} x2={s*0.58} y2={s*0.68} stroke="currentColor" strokeWidth={s*0.015} opacity={0.3} />
+    </svg>
+  );
+};
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
