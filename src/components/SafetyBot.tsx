@@ -204,7 +204,7 @@ const SafetyBot = () => {
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
               {messages.length === 0 && (
                 <div className="text-center pt-8">
-                  <Bot className="w-12 h-12 text-primary/30 mx-auto mb-3" />
+                  <div className="text-primary/30 mx-auto mb-3 w-12 h-12 flex items-center justify-center"><RobotFace size={48} /></div>
                   <p className="text-muted-foreground text-sm font-mono">
                     Hallo! 👋 Ich bin Sentinel AI.
                   </p>
