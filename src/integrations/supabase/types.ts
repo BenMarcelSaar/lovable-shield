@@ -18,16 +18,22 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_admin: boolean
+          sentinel_plus_until: string | null
           username: string
         }
         Insert: {
           created_at?: string
           id: string
+          is_admin?: boolean
+          sentinel_plus_until?: string | null
           username?: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_admin?: boolean
+          sentinel_plus_until?: string | null
           username?: string
         }
         Relationships: []
