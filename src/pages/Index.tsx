@@ -3,6 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import FileScanner from "@/components/FileScanner";
 import SafetyBot from "@/components/SafetyBot";
 import UserBanScreen from "@/components/UserBanScreen";
+import AccountMenu from "@/components/AccountMenu";
 
 const BAN_KEY = "sentinel_ban_until";
 
