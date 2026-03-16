@@ -9,6 +9,7 @@ import SafeCheck from "./pages/SafeCheck";
 import Tutorial from "./pages/Tutorial";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
