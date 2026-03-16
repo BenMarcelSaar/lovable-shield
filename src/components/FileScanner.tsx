@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Shield, AlertTriangle, CheckCircle, FileText, X, Loader2,
-  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash, BookOpen
+  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash, BookOpen, Lock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSentinelPlus } from "@/hooks/useSentinelPlus";
 import BlockScreen from "./BlockScreen";
 
 interface ScanResult {
