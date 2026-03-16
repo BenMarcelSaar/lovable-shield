@@ -26,6 +26,7 @@ const Index = () => {
       <AnimatePresence>
         {banUntil > Date.now() && <UserBanScreen unblockTime={banUntil} />}
       </AnimatePresence>
+      <AccountMenu />
       <FileScanner />
       <SafetyBot onBan={(until) => setBanUntil(until)} />
     </>
