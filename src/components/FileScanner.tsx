@@ -100,18 +100,25 @@ const FileScanner = () => {
 
   const scanUrl = useCallback(() => {
     if (!urlInput.trim()) return;
+
+    if (!canScanUrl()) {
+      setError("Tägliches URL-Scan-Limit erreicht (20/Tag). Upgrade auf Sentinel Plus für unbegrenzte Scans!");
+      return;
+    }
+
     const targetUrl = normalizeUrl(urlInput);
 
     if (!safeBrowsing) {
       window.open(targetUrl, "_blank", "noopener,noreferrer");
       setUrlInput("");
+      recordUrlScan();
       return;
     }
 
-    // Redirect to the safe-check loading page
+    recordUrlScan();
     const checkUrl = `/check?url=${encodeURIComponent(targetUrl)}`;
     window.location.href = checkUrl;
-  }, [urlInput, safeBrowsing]);
+  }, [urlInput, safeBrowsing, canScanUrl, recordUrlScan]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
