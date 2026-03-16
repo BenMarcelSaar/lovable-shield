@@ -198,6 +198,27 @@ const FileScanner = () => {
               {safeBrowsing ? "AN" : "AUS"}
             </span>
           </div>
+
+          {/* Scan Limits */}
+          {!isPlus && (
+            <div className="mt-3 flex items-center gap-4 justify-center">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+                <Globe className="w-3 h-3" />
+                <span>URL: {getRemainingScans().urlRemaining}/20</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+                <Upload className="w-3 h-3" />
+                <span>Datei: {getRemainingScans().fileRemaining}/10</span>
+              </div>
+              <span className="text-[9px] font-mono text-muted-foreground/60">pro Tag</span>
+            </div>
+          )}
+          {isPlus && (
+            <div className="mt-3 flex items-center gap-2 justify-center text-[10px] font-mono text-yellow-400/70">
+              <Lock className="w-3 h-3" />
+              <span>SENTINEL PLUS • UNLIMITED SCANS</span>
+            </div>
+          )}
         </motion.div>
 
         {/* Stats Bar */}
