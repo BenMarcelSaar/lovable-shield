@@ -52,6 +52,8 @@ const RobotFace = ({ size = 28, className = "" }: { size?: number; className?: s
 };
 
 const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
+  const { user } = useAuth();
+  const isGuest = !user;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
