@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Shield, AlertTriangle, CheckCircle, FileText, X, Loader2,
-  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash, BookOpen
+  Link, BarChart3, ShieldCheck, ShieldAlert, Globe, Activity, Hash, BookOpen, Lock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSentinelPlus } from "@/hooks/useSentinelPlus";
 import BlockScreen from "./BlockScreen";
 
 interface ScanResult {
@@ -25,6 +26,7 @@ interface ScanResult {
 
 const FileScanner = () => {
   const navigate = useNavigate();
+  const { isPlus, canScanUrl, canScanFile, recordUrlScan, recordFileScan, getRemainingScans } = useSentinelPlus();
   const [isDragging, setIsDragging] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanTarget, setScanTarget] = useState<string>("");
@@ -57,6 +59,11 @@ const FileScanner = () => {
   };
 
   const scanFile = useCallback(async (file: File) => {
+    if (!canScanFile()) {
+      setError("Tägliches Datei-Scan-Limit erreicht (10/Tag). Upgrade auf Sentinel Plus für unbegrenzte Scans!");
+      return;
+    }
+
     setScanning(true);
     setScanTarget(file.name);
     setError(null);
@@ -75,6 +82,7 @@ const FileScanner = () => {
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
 
+      recordFileScan();
       setResults(prev => [{ ...data, scannedAt: new Date().toLocaleTimeString() }, ...prev]);
     } catch (err: any) {
       setError(err.message || "Scan failed");
@@ -82,7 +90,7 @@ const FileScanner = () => {
       setScanning(false);
       setScanTarget("");
     }
-  }, []);
+  }, [canScanFile, recordFileScan]);
 
   const normalizeUrl = (input: string) => {
     let u = input.trim();
@@ -92,18 +100,25 @@ const FileScanner = () => {
 
   const scanUrl = useCallback(() => {
     if (!urlInput.trim()) return;
+
+    if (!canScanUrl()) {
+      setError("Tägliches URL-Scan-Limit erreicht (20/Tag). Upgrade auf Sentinel Plus für unbegrenzte Scans!");
+      return;
+    }
+
     const targetUrl = normalizeUrl(urlInput);
 
     if (!safeBrowsing) {
       window.open(targetUrl, "_blank", "noopener,noreferrer");
       setUrlInput("");
+      recordUrlScan();
       return;
     }
 
-    // Redirect to the safe-check loading page
+    recordUrlScan();
     const checkUrl = `/check?url=${encodeURIComponent(targetUrl)}`;
     window.location.href = checkUrl;
-  }, [urlInput, safeBrowsing]);
+  }, [urlInput, safeBrowsing, canScanUrl, recordUrlScan]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -183,6 +198,27 @@ const FileScanner = () => {
               {safeBrowsing ? "AN" : "AUS"}
             </span>
           </div>
+
+          {/* Scan Limits */}
+          {!isPlus && (
+            <div className="mt-3 flex items-center gap-4 justify-center">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+                <Globe className="w-3 h-3" />
+                <span>URL: {getRemainingScans().urlRemaining}/20</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+                <Upload className="w-3 h-3" />
+                <span>Datei: {getRemainingScans().fileRemaining}/10</span>
+              </div>
+              <span className="text-[9px] font-mono text-muted-foreground/60">pro Tag</span>
+            </div>
+          )}
+          {isPlus && (
+            <div className="mt-3 flex items-center gap-2 justify-center text-[10px] font-mono text-yellow-400/70">
+              <Lock className="w-3 h-3" />
+              <span>SENTINEL PLUS • UNLIMITED SCANS</span>
+            </div>
+          )}
         </motion.div>
 
         {/* Stats Bar */}
