@@ -59,6 +59,11 @@ const FileScanner = () => {
   };
 
   const scanFile = useCallback(async (file: File) => {
+    if (!canScanFile()) {
+      setError("Tägliches Datei-Scan-Limit erreicht (10/Tag). Upgrade auf Sentinel Plus für unbegrenzte Scans!");
+      return;
+    }
+
     setScanning(true);
     setScanTarget(file.name);
     setError(null);
@@ -77,6 +82,7 @@ const FileScanner = () => {
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
 
+      recordFileScan();
       setResults(prev => [{ ...data, scannedAt: new Date().toLocaleTimeString() }, ...prev]);
     } catch (err: any) {
       setError(err.message || "Scan failed");
@@ -84,7 +90,7 @@ const FileScanner = () => {
       setScanning(false);
       setScanTarget("");
     }
-  }, []);
+  }, [canScanFile, recordFileScan]);
 
   const normalizeUrl = (input: string) => {
     let u = input.trim();
