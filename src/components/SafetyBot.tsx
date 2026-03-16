@@ -280,24 +280,33 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
             </div>
 
             <div className="border-t border-border p-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-                  placeholder="Frage stellen..."
-                  disabled={isLoading}
-                  className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 disabled:opacity-50"
-                />
-                <button
-                  onClick={send}
-                  disabled={isLoading || !input.trim()}
-                  className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50 hover:bg-primary/90 transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+              {isGuest ? (
+                <div className="flex items-center gap-2 text-muted-foreground bg-secondary/50 rounded-lg px-3 py-2.5">
+                  <Lock className="w-4 h-4 shrink-0" />
+                  <p className="text-xs font-mono">
+                    Melde dich an, um mit Sentinel AI zu chatten.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
+                    placeholder="Frage stellen..."
+                    disabled={isLoading}
+                    className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                  />
+                  <button
+                    onClick={send}
+                    disabled={isLoading || !input.trim()}
+                    className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50 hover:bg-primary/90 transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
