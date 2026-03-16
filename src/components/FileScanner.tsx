@@ -26,6 +26,7 @@ interface ScanResult {
 
 const FileScanner = () => {
   const navigate = useNavigate();
+  const { isPlus, canScanUrl, canScanFile, recordUrlScan, recordFileScan, getRemainingScans } = useSentinelPlus();
   const [isDragging, setIsDragging] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanTarget, setScanTarget] = useState<string>("");
