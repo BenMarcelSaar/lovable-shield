@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, Lock } from "lucide-react";
+import { X, Send, Loader2, Lock, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSentinelPlus } from "@/hooks/useSentinelPlus";
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -53,6 +54,7 @@ const RobotFace = ({ size = 28, className = "" }: { size?: number; className?: s
 
 const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
   const { user } = useAuth();
+  const { isPlus } = useSentinelPlus();
   const isGuest = !user;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -68,7 +70,6 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
     const text = input.trim();
     if (!text || isLoading) return;
 
-    // Check if currently banned
     const banUntil = Number(localStorage.getItem(BAN_KEY) || 0);
     if (banUntil > Date.now()) {
       onBan?.(banUntil);
@@ -102,10 +103,9 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [...messages, userMsg] }),
+        body: JSON.stringify({ messages: [...messages, userMsg], isPlus }),
       });
 
-      // Check for block response (JSON, not stream)
       const contentType = resp.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
         const data = await resp.json();
@@ -114,7 +114,6 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
           localStorage.setItem(BAN_KEY, String(until));
           setOpen(false);
           onBan?.(until);
-          // Remove the offensive message
           setMessages((prev) => prev.slice(0, -1));
           return;
         }
@@ -204,25 +203,30 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[520px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
-            <div className="bg-primary/10 border-b border-border px-4 py-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary">
+            <div className={`border-b border-border px-4 py-3 flex items-center gap-3 ${isPlus ? "bg-yellow-500/10" : "bg-primary/10"}`}>
+              <div className={`w-9 h-9 rounded-full border flex items-center justify-center ${isPlus ? "bg-yellow-500/20 border-yellow-500/40 text-yellow-400" : "bg-primary/20 border-primary/40 text-primary"}`}>
                 <RobotFace size={22} />
               </div>
               <div>
-                <h3 className="font-bold font-mono text-foreground text-sm">SENTINEL AI</h3>
-                <p className="text-[10px] font-mono text-muted-foreground">Dein Internet-Sicherheitsberater</p>
+                <h3 className="font-bold font-mono text-foreground text-sm flex items-center gap-1.5">
+                  SENTINEL AI
+                  {isPlus && <Crown className="w-3.5 h-3.5 text-yellow-400" />}
+                </h3>
+                <p className={`text-[10px] font-mono ${isPlus ? "text-yellow-400/70" : "text-muted-foreground"}`}>
+                  {isPlus ? "Plus • Premium KI-Berater" : "Dein Internet-Sicherheitsberater"}
+                </p>
               </div>
-              <div className="ml-auto w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <div className={`ml-auto w-2 h-2 rounded-full animate-pulse ${isPlus ? "bg-yellow-400" : "bg-primary"}`} />
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
               {messages.length === 0 && (
                 <div className="text-center pt-8">
-                  <div className="text-primary/30 mx-auto mb-3 w-12 h-12 flex items-center justify-center">
+                  <div className={`mx-auto mb-3 w-12 h-12 flex items-center justify-center ${isPlus ? "text-yellow-400/30" : "text-primary/30"}`}>
                     <RobotFace size={48} />
                   </div>
                   <p className="text-muted-foreground text-sm font-mono">
-                    Hallo! 👋 Ich bin Sentinel AI.
+                    Hallo! 👋 Ich bin Sentinel AI{isPlus ? " Plus" : ""}.
                   </p>
                   <p className="text-muted-foreground text-xs mt-1">
                     Frag mich alles über Datenschutz & Internet-Sicherheit!
@@ -236,7 +240,11 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
                       <button
                         key={q}
                         onClick={() => setInput(q)}
-                        className="block w-full text-left text-xs font-mono text-primary/80 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 hover:bg-primary/10 transition-colors"
+                        className={`block w-full text-left text-xs font-mono rounded-lg px-3 py-2 transition-colors ${
+                          isPlus
+                            ? "text-yellow-400/80 bg-yellow-500/5 border border-yellow-500/20 hover:bg-yellow-500/10"
+                            : "text-primary/80 bg-primary/5 border border-primary/20 hover:bg-primary/10"
+                        }`}
                       >
                         {q}
                       </button>

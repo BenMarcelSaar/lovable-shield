@@ -6,7 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Simple bad-word detection (German + English)
 const BAD_WORDS = [
   "fick", "fck", "scheiße", "scheisse", "hurensohn", "wichser", "arschloch",
   "missgeburt", "bastard", "hure", "fotze", "schwuchtel", "spast",
@@ -28,9 +27,8 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, isPlus } = await req.json();
 
-    // Check the latest user message for bad content
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
     if (lastUserMsg && containsBadContent(lastUserMsg.content)) {
       return new Response(
@@ -50,20 +48,33 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            {
-              role: "system",
-              content: `Du bist "Sentinel AI", ein freundlicher und hilfsbereiter Sicherheitsexperte für das Internet. 
+    // Use better model and longer prompts for Plus users
+    const model = isPlus ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
+    
+    const systemPrompt = isPlus
+      ? `Du bist "Sentinel AI Plus", ein erstklassiger Premium-Sicherheitsexperte für das Internet.
+Du bist die erweiterte Version von Sentinel AI mit tieferem Fachwissen und ausführlicheren Antworten.
+
+Du hilfst Nutzern bei allen Fragen zu:
+- Datenschutz und Privatsphäre im Internet (inkl. fortgeschrittene Techniken)
+- Sichere Passwörter, Passwort-Manager und Hardware-Sicherheitsschlüssel
+- Phishing, Spear-Phishing und Social Engineering erkennen und verhindern
+- Sichere Nutzung von Social Media und Datenschutzeinstellungen
+- VPN, Tor, Verschlüsselung (E2E, PGP) und anonymes Surfen
+- Malware, Ransomware, Zero-Day-Exploits und wie man sich schützt
+- Kindersicherheit im Internet und Jugendschutz
+- DSGVO, Datenschutzrechte und digitale Selbstverteidigung
+- Sichere E-Mail-Kommunikation und verschlüsselte Messenger
+- Zwei-Faktor-Authentifizierung und biometrische Sicherheit
+- Netzwerksicherheit, Firewall-Konfiguration und IoT-Sicherheit
+- Dark Web Monitoring und Identitätsschutz
+- Code-Sicherheit und sichere Entwicklungspraktiken
+
+Du bist ein Premium-Berater: Antworte ausführlich, detailliert und mit konkreten Schritt-für-Schritt-Anleitungen.
+Gib praktische Empfehlungen mit spezifischen Tool-Vorschlägen. Erkläre auch technische Hintergründe.
+Antworte immer auf Deutsch, sei professionell aber freundlich. Verwende Emojis passend.
+Du darfst bis zu 6-8 Absätze verwenden wenn nötig.`
+      : `Du bist "Sentinel AI", ein freundlicher und hilfsbereiter Sicherheitsexperte für das Internet. 
 Du hilfst Nutzern bei Fragen zu:
 - Datenschutz und Privatsphäre im Internet
 - Sichere Passwörter und Passwort-Manager
@@ -78,8 +89,20 @@ Du hilfst Nutzern bei Fragen zu:
 
 Antworte immer auf Deutsch, sei freundlich und erkläre Dinge verständlich – auch für Anfänger. 
 Verwende Emojis sparsam aber passend. Halte Antworten kurz und präzise (max 3-4 Absätze).
-Wenn du dir bei etwas nicht sicher bist, sage es ehrlich.`,
-            },
+Wenn du dir bei etwas nicht sicher bist, sage es ehrlich.`;
+
+    const response = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
             ...messages,
           ],
           stream: true,
