@@ -10,10 +10,11 @@ import { ArrowLeft, Save, User, Mail, Shield, Smartphone, Loader2, Check, X, Cop
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import AccountMenu from "@/components/AccountMenu";
+import AdminCodesPanel from "@/components/AdminCodesPanel";
 
 const Settings = () => {
   const { user } = useAuth();
-  const { isPlus } = useSentinelPlus();
+  const { isPlus, isAdmin } = useSentinelPlus();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
@@ -185,6 +186,9 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Admin Codes Panel */}
+          {isAdmin && <AdminCodesPanel />}
 
           {/* 2FA Card */}
           <Card className="border-border bg-card">

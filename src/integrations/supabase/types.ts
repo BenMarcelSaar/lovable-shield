@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      plus_codes: {
+        Row: {
+          code: string
+          created_at: string
+          days: number
+          id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          days?: number
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          days?: number
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
