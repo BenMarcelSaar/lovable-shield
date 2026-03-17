@@ -16,9 +16,9 @@ const SentinelPlusBadge = () => {
   const handleActivate = async () => {
     setError("");
     setLoading(true);
-    const ok = await activateWithCode(code);
+    const result = await activateWithCode(code);
     setLoading(false);
-    if (ok) {
+    if (result.success) {
       setSuccess(true);
       setTimeout(() => {
         setShowModal(false);
@@ -26,7 +26,7 @@ const SentinelPlusBadge = () => {
         setCode("");
       }, 2000);
     } else {
-      setError("Ungültiger Code. Versuche es erneut.");
+      setError(result.error || "Ungültiger Code.");
     }
   };
 
@@ -46,7 +46,7 @@ const SentinelPlusBadge = () => {
       >
         <Crown className={`w-4 h-4 ${isPlus ? "text-yellow-200" : ""}`} />
         <span>SENTINEL {isPlus ? "PLUS" : "+"}</span>
-        {isPlus && !({ isAdmin: false } as any).isAdmin && (
+        {isPlus && daysLeft > 0 && (
           <span className="text-[9px] opacity-75">{daysLeft}d</span>
         )}
       </button>
@@ -67,7 +67,6 @@ const SentinelPlusBadge = () => {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md bg-card border border-border rounded-2xl overflow-hidden"
             >
-              {/* Header */}
               <div className="relative bg-gradient-to-br from-yellow-600/20 to-amber-500/10 border-b border-yellow-500/20 px-6 py-5">
                 <button
                   onClick={() => setShowModal(false)}
@@ -86,7 +85,6 @@ const SentinelPlusBadge = () => {
                 </div>
               </div>
 
-              {/* Benefits */}
               <div className="px-6 py-4 space-y-3">
                 {[
                   "Unbegrenzte URL & Datei-Scans",
@@ -101,7 +99,6 @@ const SentinelPlusBadge = () => {
                 ))}
               </div>
 
-              {/* Status / Activation */}
               <div className="px-6 pb-6 pt-2">
                 {isPlus ? (
                   <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">

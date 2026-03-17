@@ -38,6 +38,27 @@ export type Database = {
         }
         Relationships: []
       }
+      used_plus_codes: {
+        Row: {
+          code: string
+          id: string
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          id?: string
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          id?: string
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
