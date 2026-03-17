@@ -4,8 +4,6 @@ import { useAuth } from "./useAuth";
 
 const SCAN_LIMITS_KEY = "sentinel_scan_limits";
 
-const VALID_CODES = ["BEN26", "SENTINEL+"];
-
 interface ScanLimits {
   date: string;
   urlScans: number;
@@ -97,26 +95,31 @@ export const useSentinelPlus = () => {
   };
 
   const activateWithCode = async (code: string): Promise<{ success: boolean; error?: string }> => {
-    const normalizedCode = code.trim().toUpperCase();
-    if (!VALID_CODES.includes(normalizedCode)) {
-      return { success: false, error: "Ungültiger Code." };
-    }
     if (!user) return { success: false, error: "Du musst angemeldet sein." };
 
-    // Check if this code was already used by this user
-    const { data: usedCodes } = await supabase
-      .from("used_plus_codes")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("code", normalizedCode);
+    const normalizedCode = code.trim().toUpperCase();
 
-    if (usedCodes && usedCodes.length > 0) {
+    // Look up code in database
+    const { data: codeData } = await supabase
+      .from("plus_codes")
+      .select("*")
+      .eq("code", normalizedCode)
+      .single();
+
+    if (!codeData) {
+      return { success: false, error: "Ungültiger Code." };
+    }
+
+    // Check if already redeemed
+    if ((codeData as any).redeemed_by) {
       return { success: false, error: "Dieser Code wurde bereits eingelöst." };
     }
 
+    const days = (codeData as any).days || 7;
     const until = new Date();
-    until.setDate(until.getDate() + 7);
+    until.setDate(until.getDate() + days);
 
+    // Update profile
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ sentinel_plus_until: until.toISOString() } as any)
@@ -124,10 +127,11 @@ export const useSentinelPlus = () => {
 
     if (updateError) return { success: false, error: "Aktivierung fehlgeschlagen." };
 
-    // Record the used code
+    // Mark code as redeemed
     await supabase
-      .from("used_plus_codes")
-      .insert({ user_id: user.id, code: normalizedCode } as any);
+      .from("plus_codes")
+      .update({ redeemed_by: user.id, redeemed_at: new Date().toISOString() } as any)
+      .eq("id", (codeData as any).id);
 
     setIsPlus(true);
     setPlusUntil(until.toISOString());

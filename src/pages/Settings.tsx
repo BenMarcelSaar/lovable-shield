@@ -187,6 +187,9 @@ const Settings = () => {
             </CardContent>
           </Card>
 
+          {/* Admin Codes Panel */}
+          {isAdmin && <AdminCodesPanel />}
+
           {/* 2FA Card */}
           <Card className="border-border bg-card">
             <CardHeader>
