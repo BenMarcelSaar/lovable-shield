@@ -14,7 +14,7 @@ import AdminCodesPanel from "@/components/AdminCodesPanel";
 
 const Settings = () => {
   const { user } = useAuth();
-  const { isPlus } = useSentinelPlus();
+  const { isPlus, isAdmin } = useSentinelPlus();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
