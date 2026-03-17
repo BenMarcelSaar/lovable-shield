@@ -4,6 +4,8 @@ import { useAuth } from "./useAuth";
 
 const SCAN_LIMITS_KEY = "sentinel_scan_limits";
 
+const VALID_CODES = ["BEN26", "SENTINEL+"];
+
 interface ScanLimits {
   date: string;
   urlScans: number;
@@ -94,23 +96,42 @@ export const useSentinelPlus = () => {
     };
   };
 
-  const activateWithCode = async (code: string): Promise<boolean> => {
-    if (code.trim().toUpperCase() !== "SENTINEL-PLUS") return false;
-    if (!user) return false;
+  const activateWithCode = async (code: string): Promise<{ success: boolean; error?: string }> => {
+    const normalizedCode = code.trim().toUpperCase();
+    if (!VALID_CODES.includes(normalizedCode)) {
+      return { success: false, error: "Ungültiger Code." };
+    }
+    if (!user) return { success: false, error: "Du musst angemeldet sein." };
+
+    // Check if this code was already used by this user
+    const { data: usedCodes } = await supabase
+      .from("used_plus_codes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("code", normalizedCode);
+
+    if (usedCodes && usedCodes.length > 0) {
+      return { success: false, error: "Dieser Code wurde bereits eingelöst." };
+    }
 
     const until = new Date();
     until.setDate(until.getDate() + 7);
 
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .from("profiles")
       .update({ sentinel_plus_until: until.toISOString() } as any)
       .eq("id", user.id);
 
-    if (error) return false;
+    if (updateError) return { success: false, error: "Aktivierung fehlgeschlagen." };
+
+    // Record the used code
+    await supabase
+      .from("used_plus_codes")
+      .insert({ user_id: user.id, code: normalizedCode } as any);
 
     setIsPlus(true);
     setPlusUntil(until.toISOString());
-    return true;
+    return { success: true };
   };
 
   return {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, Eye, EyeOff, Loader2, UserX } from "lucide-react";
+import { Shield, Eye, EyeOff, Loader2, UserX, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -15,6 +15,12 @@ const Auth = () => {
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
+  // MFA state
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaLoading, setMfaLoading] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -23,8 +29,21 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+
+        // Check if MFA is required
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const verifiedFactors = factorsData?.totp?.filter((f: any) => f.status === "verified") || [];
+
+        if (verifiedFactors.length > 0) {
+          // MFA is enrolled - need verification
+          setMfaFactorId(verifiedFactors[0].id);
+          setMfaRequired(true);
+          setLoading(false);
+          return;
+        }
+
         navigate("/");
       } else {
         if (username.trim().length < 2) {
@@ -47,6 +66,93 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handleMfaVerify = async () => {
+    setError("");
+    setMfaLoading(true);
+    try {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: mfaFactorId,
+      });
+      if (challengeError) throw challengeError;
+
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challengeData.id,
+        code: mfaCode,
+      });
+      if (verifyError) throw verifyError;
+
+      navigate("/");
+    } catch (err: any) {
+      setError(err.message || "Ungültiger Code.");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  if (mfaRequired) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="fixed inset-0 scanline pointer-events-none" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-card border border-border rounded-2xl p-8 relative"
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold font-mono text-foreground">2FA VERIFIZIERUNG</h1>
+            <p className="text-xs font-mono text-muted-foreground mt-1 tracking-widest">
+              Gib den Code aus deiner Authenticator-App ein
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <input
+              type="text"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              className="w-full bg-secondary border border-border rounded-lg px-3 py-3 text-center text-lg text-foreground font-mono tracking-[0.5em] placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+              maxLength={6}
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && mfaCode.length === 6 && handleMfaVerify()}
+            />
+
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-destructive text-xs font-mono">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleMfaVerify}
+              disabled={mfaLoading || mfaCode.length !== 6}
+              className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-mono font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {mfaLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              VERIFIZIEREN
+            </button>
+
+            <button
+              onClick={() => {
+                setMfaRequired(false);
+                setMfaCode("");
+                setError("");
+                supabase.auth.signOut();
+              }}
+              className="w-full text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Zurück zur Anmeldung
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
