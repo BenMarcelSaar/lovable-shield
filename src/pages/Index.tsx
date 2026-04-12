@@ -69,14 +69,21 @@ const Index = () => {
 
   return (
     <>
-      <AnimatePresence>
-        {showPlusLoading && <PlusLoadingScreen />}
-        {banUntil > Date.now() && <UserBanScreen unblockTime={banUntil} />}
-      </AnimatePresence>
-      <SentinelPlusBadge />
-      <AccountMenu />
-      <FileScanner />
-      <SafetyBot onBan={(until) => setBanUntil(until)} />
+      {showShutdown && <ShutdownScreen shutdownUntil={shutdown?.shutdown_until ?? null} />}
+      {!showShutdown && (
+        <>
+          <AnimatePresence>
+            {showPlusLoading && <PlusLoadingScreen />}
+            {banUntil > Date.now() && <UserBanScreen unblockTime={banUntil} />}
+          </AnimatePresence>
+          <SentinelPlusBadge />
+          <AccountMenu />
+          <FileScanner />
+          <SafetyBot onBan={(until) => setBanUntil(until)} />
+        </>
+      )}
+    </>
+  );
     </>
   );
 };
