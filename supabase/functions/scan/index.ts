@@ -1,18 +1,45 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const SHA256_RE = /^[a-f0-9]{64}$/i;
+const URL_RE = /^https?:\/\/.+/i;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate user
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'Nicht autorisiert.' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+  const jwt = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: 'Nicht autorisiert.' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const VIRUSTOTAL_API_KEY = Deno.env.get('VIRUSTOTAL_API_KEY');
   if (!VIRUSTOTAL_API_KEY) {
-    return new Response(JSON.stringify({ error: 'VIRUSTOTAL_API_KEY not configured' }), {
+    console.error('VIRUSTOTAL_API_KEY not configured');
+    return new Response(JSON.stringify({ error: 'Scan-Dienst vorübergehend nicht verfügbar.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -21,10 +48,25 @@ serve(async (req) => {
   try {
     const { type, url, fileHash, fileName, fileSize } = await req.json();
 
+    // Validate type
+    if (type !== 'url' && type !== 'file') {
+      return new Response(JSON.stringify({ error: 'Ungültiger Scan-Typ.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     let result;
 
     if (type === 'url') {
-      // Submit URL for scanning
+      // Validate URL
+      if (!url || typeof url !== 'string' || !URL_RE.test(url) || url.length > 2048) {
+        return new Response(JSON.stringify({ error: 'Ungültige URL.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const submitRes = await fetch('https://www.virustotal.com/api/v3/urls', {
         method: 'POST',
         headers: {
@@ -40,13 +82,13 @@ serve(async (req) => {
         submitData = JSON.parse(submitText);
       } catch {
         console.error('VT submit response not JSON:', submitRes.status, submitText.substring(0, 200));
-        throw new Error(`VirusTotal returned non-JSON response (${submitRes.status}). API key may be invalid.`);
+        throw new Error('VirusTotal API error');
       }
       if (!submitRes.ok) {
-        throw new Error(`VT URL submit failed [${submitRes.status}]: ${JSON.stringify(submitData)}`);
+        console.error('VT URL submit failed:', submitRes.status, JSON.stringify(submitData));
+        throw new Error('VirusTotal API error');
       }
 
-      // Wait a moment then get results
       await new Promise(r => setTimeout(r, 3000));
 
       const analysisId = submitData.data?.id;
@@ -60,7 +102,7 @@ serve(async (req) => {
         analysisData = JSON.parse(analysisText);
       } catch {
         console.error('VT analysis response not JSON:', analysisRes.status, analysisText.substring(0, 200));
-        throw new Error(`VirusTotal analysis returned non-JSON response (${analysisRes.status}).`);
+        throw new Error('VirusTotal API error');
       }
       const stats = analysisData.data?.attributes?.stats || {};
       const results = analysisData.data?.attributes?.results || {};
@@ -87,7 +129,18 @@ serve(async (req) => {
         totalEngines: Object.keys(results).length,
       };
     } else if (type === 'file') {
-      // Look up file hash
+      // Validate file hash
+      if (!fileHash || typeof fileHash !== 'string' || !SHA256_RE.test(fileHash)) {
+        return new Response(JSON.stringify({ error: 'Ungültiger Datei-Hash.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Sanitize fileName and fileSize
+      const safeName = typeof fileName === 'string' ? fileName.slice(0, 255) : fileHash;
+      const safeSize = typeof fileSize === 'string' ? fileSize.slice(0, 50) : '-';
+
       const hashRes = await fetch(`https://www.virustotal.com/api/v3/files/${fileHash}`, {
         headers: { 'x-apikey': VIRUSTOTAL_API_KEY },
       });
@@ -96,8 +149,8 @@ serve(async (req) => {
 
       if (hashRes.status === 404) {
         result = {
-          name: fileName || fileHash,
-          size: fileSize || '-',
+          name: safeName,
+          size: safeSize,
           type: 'file',
           status: 'unknown',
           malicious: 0,
@@ -113,10 +166,12 @@ serve(async (req) => {
         try {
           hashData = JSON.parse(hashText);
         } catch {
-          throw new Error(`VirusTotal file lookup returned non-JSON response (${hashRes.status}).`);
+          console.error('VT file response not JSON:', hashRes.status, hashText.substring(0, 200));
+          throw new Error('VirusTotal API error');
         }
         if (!hashRes.ok) {
-          throw new Error(`VT file lookup failed [${hashRes.status}]: ${JSON.stringify(hashData)}`);
+          console.error('VT file lookup failed:', hashRes.status, JSON.stringify(hashData));
+          throw new Error('VirusTotal API error');
         }
 
         const stats = hashData.data?.attributes?.last_analysis_stats || {};
@@ -132,8 +187,8 @@ serve(async (req) => {
 
         const malicious = (stats.malicious || 0) + (stats.suspicious || 0);
         result = {
-          name: fileName || hashData.data?.attributes?.meaningful_name || fileHash,
-          size: fileSize || '-',
+          name: safeName,
+          size: safeSize,
           type: 'file',
           status: malicious > 0 ? 'threat' : 'clean',
           malicious: stats.malicious || 0,
@@ -144,8 +199,6 @@ serve(async (req) => {
           totalEngines: Object.keys(results).length,
         };
       }
-    } else {
-      throw new Error('Invalid scan type. Use "url" or "file".');
     }
 
     return new Response(JSON.stringify(result), {
@@ -153,8 +206,7 @@ serve(async (req) => {
     });
   } catch (error: unknown) {
     console.error('Scan error:', error);
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: msg }), {
+    return new Response(JSON.stringify({ error: 'Scan-Dienst vorübergehend nicht verfügbar.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

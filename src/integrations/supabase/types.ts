@@ -91,7 +91,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      redeem_plus_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

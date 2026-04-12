@@ -103,7 +103,7 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [...messages, userMsg], isPlus }),
+        body: JSON.stringify({ messages: [...messages, userMsg] }),
       });
 
       const contentType = resp.headers.get("content-type") || "";
