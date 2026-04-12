@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,7 +28,29 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, isPlus } = await req.json();
+    // Authenticate user and check Plus status server-side
+    const authHeader = req.headers.get('Authorization');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+    let isPlus = false;
+    if (authHeader) {
+      const jwt = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabaseAdmin.auth.getUser(jwt);
+      if (user) {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('sentinel_plus_until, is_admin')
+          .eq('id', user.id)
+          .single();
+        
+        isPlus = profile?.is_admin === true || 
+          (!!profile?.sentinel_plus_until && new Date(profile.sentinel_plus_until) > new Date());
+      }
+    }
+
+    const { messages } = await req.json();
 
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
     if (lastUserMsg && containsBadContent(lastUserMsg.content)) {
@@ -45,10 +68,13 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "KI-Dienst vorübergehend nicht verfügbar." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Use better model and longer prompts for Plus users
     const model = isPlus ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
     
     const systemPrompt = isPlus
@@ -137,7 +163,7 @@ Wenn du dir bei etwas nicht sicher bist, sage es ehrlich.`;
   } catch (e) {
     console.error("safety-chat error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "KI-Dienst vorübergehend nicht verfügbar." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
