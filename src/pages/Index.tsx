@@ -39,7 +39,6 @@ const Index = () => {
         .single();
       if (data) {
         const d = data as any;
-        // If timed shutdown has expired, it's no longer active
         if (d.active && d.shutdown_until && new Date(d.shutdown_until).getTime() <= Date.now()) {
           setShutdown({ active: false, shutdown_until: null });
         } else {
@@ -64,7 +63,6 @@ const Index = () => {
     }
   }, [isPlus, plusLoading]);
 
-  // Show shutdown screen for non-admins
   const showShutdown = shutdown?.active && !isAdmin;
 
   return (
@@ -82,8 +80,6 @@ const Index = () => {
           <SafetyBot onBan={(until) => setBanUntil(until)} />
         </>
       )}
-    </>
-  );
     </>
   );
 };
