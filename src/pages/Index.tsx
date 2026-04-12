@@ -6,13 +6,16 @@ import UserBanScreen from "@/components/UserBanScreen";
 import AccountMenu from "@/components/AccountMenu";
 import SentinelPlusBadge from "@/components/SentinelPlusBadge";
 import PlusLoadingScreen from "@/components/PlusLoadingScreen";
+import ShutdownScreen from "@/components/ShutdownScreen";
 import { useSentinelPlus } from "@/hooks/useSentinelPlus";
+import { supabase } from "@/integrations/supabase/client";
 
 const BAN_KEY = "sentinel_ban_until";
 
 const Index = () => {
   const [banUntil, setBanUntil] = useState(0);
-  const { isPlus, loading: plusLoading } = useSentinelPlus();
+  const { isPlus, isAdmin, loading: plusLoading } = useSentinelPlus();
+  const [shutdown, setShutdown] = useState<{ active: boolean; shutdown_until: string | null } | null>(null);
   const [showPlusLoading, setShowPlusLoading] = useState(false);
 
   useEffect(() => {

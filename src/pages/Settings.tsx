@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import AccountMenu from "@/components/AccountMenu";
 import AdminCodesPanel from "@/components/AdminCodesPanel";
+import AdminShutdownPanel from "@/components/AdminShutdownPanel";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -187,7 +188,8 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* Admin Codes Panel */}
+          {/* Admin Panels */}
+          {isAdmin && <AdminShutdownPanel />}
           {isAdmin && <AdminCodesPanel />}
 
           {/* 2FA Card */}
