@@ -65,6 +65,30 @@ export type Database = {
         }
         Relationships: []
       }
+      site_shutdown: {
+        Row: {
+          active: boolean
+          id: string
+          shutdown_until: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          id?: string
+          shutdown_until?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          id?: string
+          shutdown_until?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       used_plus_codes: {
         Row: {
           code: string
