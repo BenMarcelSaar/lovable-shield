@@ -29,6 +29,29 @@ const Index = () => {
     return () => clearTimeout(timeout);
   }, [banUntil]);
 
+  // Check shutdown status
+  useEffect(() => {
+    const checkShutdown = async () => {
+      const { data } = await supabase
+        .from("site_shutdown")
+        .select("*")
+        .limit(1)
+        .single();
+      if (data) {
+        const d = data as any;
+        // If timed shutdown has expired, it's no longer active
+        if (d.active && d.shutdown_until && new Date(d.shutdown_until).getTime() <= Date.now()) {
+          setShutdown({ active: false, shutdown_until: null });
+        } else {
+          setShutdown({ active: d.active, shutdown_until: d.shutdown_until });
+        }
+      }
+    };
+    checkShutdown();
+    const interval = setInterval(checkShutdown, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Show plus loading screen for Plus users on first load
   useEffect(() => {
     if (!plusLoading && isPlus) {
@@ -40,6 +63,9 @@ const Index = () => {
       }
     }
   }, [isPlus, plusLoading]);
+
+  // Show shutdown screen for non-admins
+  const showShutdown = shutdown?.active && !isAdmin;
 
   return (
     <>
