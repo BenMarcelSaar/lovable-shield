@@ -97,44 +97,19 @@ export const useSentinelPlus = () => {
   const activateWithCode = async (code: string): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: "Du musst angemeldet sein." };
 
-    const normalizedCode = code.trim().toUpperCase();
+    const { data, error } = await supabase.rpc("redeem_plus_code", { p_code: code });
 
-    // Look up code in database
-    const { data: codeData } = await supabase
-      .from("plus_codes")
-      .select("*")
-      .eq("code", normalizedCode)
-      .single();
-
-    if (!codeData) {
-      return { success: false, error: "Ungültiger Code." };
+    if (error) {
+      return { success: false, error: "Aktivierung fehlgeschlagen." };
     }
 
-    // Check if already redeemed
-    if ((codeData as any).redeemed_by) {
-      return { success: false, error: "Dieser Code wurde bereits eingelöst." };
+    const result = data as any;
+    if (!result?.success) {
+      return { success: false, error: result?.error || "Ungültiger Code." };
     }
-
-    const days = (codeData as any).days || 7;
-    const until = new Date();
-    until.setDate(until.getDate() + days);
-
-    // Update profile
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ sentinel_plus_until: until.toISOString() } as any)
-      .eq("id", user.id);
-
-    if (updateError) return { success: false, error: "Aktivierung fehlgeschlagen." };
-
-    // Mark code as redeemed
-    await supabase
-      .from("plus_codes")
-      .update({ redeemed_by: user.id, redeemed_at: new Date().toISOString() } as any)
-      .eq("id", (codeData as any).id);
 
     setIsPlus(true);
-    setPlusUntil(until.toISOString());
+    setPlusUntil(result.until);
     return { success: true };
   };
 
