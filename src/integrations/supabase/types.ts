@@ -68,6 +68,7 @@ export type Database = {
       site_shutdown: {
         Row: {
           active: boolean
+          guest_login_enabled: boolean
           id: string
           shutdown_until: string | null
           updated_at: string
@@ -75,6 +76,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          guest_login_enabled?: boolean
           id?: string
           shutdown_until?: string | null
           updated_at?: string
@@ -82,6 +84,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          guest_login_enabled?: boolean
           id?: string
           shutdown_until?: string | null
           updated_at?: string
