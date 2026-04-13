@@ -15,6 +15,11 @@ const Auth = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [forgotError, setForgotError] = useState("");
   const navigate = useNavigate();
 
   // MFA state
@@ -79,6 +84,24 @@ const Auth = () => {
       setError(err.message || "Ein Fehler ist aufgetreten.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotSuccess("");
+    setForgotLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setForgotSuccess("Falls ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen gesendet. Prüfe dein Postfach.");
+    } catch (err: any) {
+      setForgotError(err.message || "Fehler beim Senden.");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -188,6 +211,77 @@ const Auth = () => {
     );
   }
 
+  // Forgot password screen
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="fixed inset-0 scanline pointer-events-none" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-card border border-border rounded-2xl p-8"
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold font-mono text-foreground">PASSWORT VERGESSEN</h1>
+            <p className="text-xs font-mono text-muted-foreground mt-1 tracking-widest">
+              Gib deine E-Mail ein, um einen Reset-Link zu erhalten
+            </p>
+          </div>
+
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div>
+              <label className="text-xs font-mono text-muted-foreground tracking-wider block mb-1.5">
+                E-MAIL
+              </label>
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                placeholder="deine@email.de"
+                required
+                autoFocus
+              />
+            </div>
+
+            {forgotError && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-destructive text-xs font-mono">
+                {forgotError}
+              </div>
+            )}
+
+            {forgotSuccess && (
+              <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-primary text-xs font-mono">
+                {forgotSuccess}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={forgotLoading}
+              className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-mono font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {forgotLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              RESET-LINK SENDEN
+            </button>
+          </form>
+
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => { setShowForgotPassword(false); setForgotError(""); setForgotSuccess(""); }}
+              className="text-xs font-mono text-muted-foreground hover:text-primary transition-colors"
+            >
+              Zurück zur Anmeldung
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="fixed inset-0 scanline pointer-events-none" />
@@ -265,6 +359,18 @@ const Auth = () => {
               </button>
             </div>
           </div>
+
+          {isLogin && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-[11px] font-mono text-muted-foreground hover:text-primary transition-colors"
+              >
+                Passwort vergessen?
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-destructive text-xs font-mono">

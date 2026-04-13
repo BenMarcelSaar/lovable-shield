@@ -10,6 +10,7 @@ import Tutorial from "./pages/Tutorial";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
+import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/check" element={<ProtectedRoute><SafeCheck /></ProtectedRoute>} />
           <Route path="/tutorial" element={<ProtectedRoute><Tutorial /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
