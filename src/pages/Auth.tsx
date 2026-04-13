@@ -15,6 +15,11 @@ const Auth = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [forgotError, setForgotError] = useState("");
   const navigate = useNavigate();
 
   // MFA state
