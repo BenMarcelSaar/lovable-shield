@@ -22,7 +22,20 @@ const Auth = () => {
   const [mfaFactorId, setMfaFactorId] = useState("");
   const [mfaCode, setMfaCode] = useState("");
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [guestEnabled, setGuestEnabled] = useState(true);
+  const [guestLoading, setGuestLoading] = useState(true);
 
+  useEffect(() => {
+    supabase
+      .from("site_shutdown")
+      .select("guest_login_enabled")
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) setGuestEnabled((data as any).guest_login_enabled ?? true);
+        setGuestLoading(false);
+      });
+  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
