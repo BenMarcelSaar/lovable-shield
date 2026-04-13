@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Shield, Eye, EyeOff, Loader2, UserX, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -309,21 +309,23 @@ const Auth = () => {
             {isLogin ? "Noch kein Konto? Jetzt registrieren" : "Schon ein Konto? Anmelden"}
           </button>
 
-          <div className="border-t border-border pt-3">
-            <button
-              onClick={() => {
-                localStorage.setItem("sentinel_guest", "true");
-                navigate("/");
-              }}
-              className="w-full py-2.5 bg-secondary text-secondary-foreground rounded-lg font-mono text-xs hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2"
-            >
-              <UserX className="w-3.5 h-3.5" />
-              ALS GAST FORTFAHREN
-            </button>
-            <p className="text-[10px] text-muted-foreground mt-1.5 font-mono">
-              Eingeschränkt: Kein Zugriff auf Sentinel AI Chat
-            </p>
-          </div>
+          {!guestLoading && guestEnabled && (
+            <div className="border-t border-border pt-3">
+              <button
+                onClick={() => {
+                  localStorage.setItem("sentinel_guest", "true");
+                  navigate("/");
+                }}
+                className="w-full py-2.5 bg-secondary text-secondary-foreground rounded-lg font-mono text-xs hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2"
+              >
+                <UserX className="w-3.5 h-3.5" />
+                ALS GAST FORTFAHREN
+              </button>
+              <p className="text-[10px] text-muted-foreground mt-1.5 font-mono">
+                Eingeschränkt: Kein Zugriff auf Sentinel AI Chat
+              </p>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
