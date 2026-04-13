@@ -10,8 +10,7 @@ import { ArrowLeft, Save, User, Mail, Shield, Smartphone, Loader2, Check, X, Cop
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import AccountMenu from "@/components/AccountMenu";
-import AdminCodesPanel from "@/components/AdminCodesPanel";
-import AdminShutdownPanel from "@/components/AdminShutdownPanel";
+import AdminSettingsSection from "@/components/AdminSettingsSection";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -188,9 +187,12 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* Admin Panels */}
-          {isAdmin && <AdminShutdownPanel />}
-          {isAdmin && <AdminCodesPanel />}
+          {/* Admin Section */}
+          {isAdmin && (
+            <div className="pt-6 border-t border-border">
+              <AdminSettingsSection />
+            </div>
+          )}
 
           {/* 2FA Card */}
           <Card className="border-border bg-card">

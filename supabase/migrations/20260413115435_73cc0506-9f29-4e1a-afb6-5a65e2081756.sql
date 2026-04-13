@@ -1,0 +1,1 @@
+ALTER TABLE public.site_shutdown ADD COLUMN guest_login_enabled boolean NOT NULL DEFAULT true;
