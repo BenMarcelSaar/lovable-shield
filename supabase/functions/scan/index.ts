@@ -9,17 +9,113 @@ const corsHeaders = {
 const SHA256_RE = /^[a-f0-9]{64}$/i;
 const URL_RE = /^https?:\/\/.+/i;
 
+async function getUrlId(url: string): string {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(url);
+  // VT URL identifier = base64url of the URL (without padding)
+  return btoa(url).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function checkExistingReport(apiKey: string, url: string) {
+  const urlId = await getUrlId(url);
+  const res = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
+    headers: { 'x-apikey': apiKey },
+  });
+  if (res.status === 404) return null;
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+async function submitAndPollUrl(apiKey: string, url: string) {
+  // Submit URL for scanning
+  const submitRes = await fetch('https://www.virustotal.com/api/v3/urls', {
+    method: 'POST',
+    headers: {
+      'x-apikey': apiKey,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `url=${encodeURIComponent(url)}`,
+  });
+
+  const submitText = await submitRes.text();
+  let submitData;
+  try {
+    submitData = JSON.parse(submitText);
+  } catch {
+    throw new Error('VirusTotal API error');
+  }
+  if (!submitRes.ok) throw new Error('VirusTotal API error');
+
+  const analysisId = submitData.data?.id;
+  if (!analysisId) throw new Error('No analysis ID');
+
+  // Poll up to 5 times (total ~15s wait)
+  for (let i = 0; i < 5; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    const analysisRes = await fetch(`https://www.virustotal.com/api/v3/analyses/${analysisId}`, {
+      headers: { 'x-apikey': apiKey },
+    });
+    const analysisText = await analysisRes.text();
+    let analysisData;
+    try {
+      analysisData = JSON.parse(analysisText);
+    } catch {
+      continue;
+    }
+    const status = analysisData.data?.attributes?.status;
+    if (status === 'completed') return analysisData;
+  }
+  // Return last attempt even if not completed
+  const lastRes = await fetch(`https://www.virustotal.com/api/v3/analyses/${analysisId}`, {
+    headers: { 'x-apikey': apiKey },
+  });
+  return JSON.parse(await lastRes.text());
+}
+
+function extractThreats(results: Record<string, any>): { threats: string[]; malicious: number; suspicious: number; phishing: number; harmless: number; undetected: number } {
+  const threats: string[] = [];
+  let malicious = 0, suspicious = 0, phishing = 0, harmless = 0, undetected = 0;
+
+  for (const [engine, detail] of Object.entries(results)) {
+    const d = detail as any;
+    const cat = d.category?.toLowerCase() || '';
+    const result = (d.result || '').toLowerCase();
+
+    if (cat === 'malicious' || cat === 'suspicious' || cat === 'phishing' ||
+        result.includes('phishing') || result.includes('malware') || result.includes('malicious') ||
+        result.includes('spam') || result.includes('suspicious')) {
+      threats.push(`${engine}: ${d.result || d.category}`);
+      if (cat === 'phishing' || result.includes('phishing')) {
+        phishing++;
+        malicious++;
+      } else if (cat === 'malicious') {
+        malicious++;
+      } else {
+        suspicious++;
+      }
+    } else if (cat === 'harmless' || cat === 'clean') {
+      harmless++;
+    } else {
+      undetected++;
+    }
+  }
+
+  return { threats, malicious, suspicious, phishing, harmless, undetected };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Authenticate user
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
     return new Response(JSON.stringify({ error: 'Nicht autorisiert.' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -31,172 +127,132 @@ serve(async (req) => {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
   if (authError || !user) {
     return new Response(JSON.stringify({ error: 'Nicht autorisiert.' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
   const VIRUSTOTAL_API_KEY = Deno.env.get('VIRUSTOTAL_API_KEY');
   if (!VIRUSTOTAL_API_KEY) {
-    console.error('VIRUSTOTAL_API_KEY not configured');
     return new Response(JSON.stringify({ error: 'Scan-Dienst vorübergehend nicht verfügbar.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
   try {
     const { type, url, fileHash, fileName, fileSize } = await req.json();
 
-    // Validate type
     if (type !== 'url' && type !== 'file') {
       return new Response(JSON.stringify({ error: 'Ungültiger Scan-Typ.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     let result;
 
     if (type === 'url') {
-      // Validate URL
       if (!url || typeof url !== 'string' || !URL_RE.test(url) || url.length > 2048) {
         return new Response(JSON.stringify({ error: 'Ungültige URL.' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const submitRes = await fetch('https://www.virustotal.com/api/v3/urls', {
-        method: 'POST',
-        headers: {
-          'x-apikey': VIRUSTOTAL_API_KEY,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `url=${encodeURIComponent(url)}`,
-      });
+      // Step 1: Check existing VT report first (catches known phishing/malware)
+      const existing = await checkExistingReport(VIRUSTOTAL_API_KEY, url);
+      let stats: any = {};
+      let results: Record<string, any> = {};
+      let categories: Record<string, string> = {};
+      let reputation = 0;
 
-      const submitText = await submitRes.text();
-      let submitData;
-      try {
-        submitData = JSON.parse(submitText);
-      } catch {
-        console.error('VT submit response not JSON:', submitRes.status, submitText.substring(0, 200));
-        throw new Error('VirusTotal API error');
-      }
-      if (!submitRes.ok) {
-        console.error('VT URL submit failed:', submitRes.status, JSON.stringify(submitData));
-        throw new Error('VirusTotal API error');
+      if (existing?.data?.attributes) {
+        const attrs = existing.data.attributes;
+        stats = attrs.last_analysis_stats || {};
+        results = attrs.last_analysis_results || {};
+        categories = attrs.categories || {};
+        reputation = attrs.reputation || 0;
       }
 
-      await new Promise(r => setTimeout(r, 3000));
+      // Step 2: Also submit fresh scan and poll for completion
+      const freshAnalysis = await submitAndPollUrl(VIRUSTOTAL_API_KEY, url);
+      const freshStats = freshAnalysis?.data?.attributes?.stats || {};
+      const freshResults = freshAnalysis?.data?.attributes?.results || {};
 
-      const analysisId = submitData.data?.id;
-      const analysisRes = await fetch(`https://www.virustotal.com/api/v3/analyses/${analysisId}`, {
-        headers: { 'x-apikey': VIRUSTOTAL_API_KEY },
-      });
+      // Merge: use whichever has more detections
+      const existingDetections = (stats.malicious || 0) + (stats.suspicious || 0);
+      const freshDetections = (freshStats.malicious || 0) + (freshStats.suspicious || 0);
 
-      const analysisText = await analysisRes.text();
-      let analysisData;
-      try {
-        analysisData = JSON.parse(analysisText);
-      } catch {
-        console.error('VT analysis response not JSON:', analysisRes.status, analysisText.substring(0, 200));
-        throw new Error('VirusTotal API error');
-      }
-      const stats = analysisData.data?.attributes?.stats || {};
-      const results = analysisData.data?.attributes?.results || {};
+      const useResults = freshDetections >= existingDetections ? freshResults : results;
 
-      const threats: string[] = [];
-      for (const [engine, detail] of Object.entries(results)) {
-        const d = detail as any;
-        if (d.category === 'malicious' || d.category === 'suspicious') {
-          threats.push(`${engine}: ${d.result || d.category}`);
+      // Check categories for phishing indicators
+      let categoryPhishing = false;
+      for (const [, cat] of Object.entries(categories)) {
+        const c = (cat as string).toLowerCase();
+        if (c.includes('phishing') || c.includes('malware') || c.includes('malicious') || c.includes('spam')) {
+          categoryPhishing = true;
+          break;
         }
       }
 
-      const malicious = (stats.malicious || 0) + (stats.suspicious || 0);
+      const extracted = extractThreats(useResults);
+
+      // Also consider bad reputation as threat
+      const isThreat = extracted.malicious > 0 || extracted.suspicious > 0 || categoryPhishing || reputation < -5;
+
+      if (categoryPhishing && extracted.threats.length === 0) {
+        extracted.threats.push('Category: Phishing/Malicious');
+        extracted.malicious++;
+      }
+
       result = {
         name: url,
         size: '-',
         type: 'url',
-        status: malicious > 0 ? 'threat' : 'clean',
-        malicious: stats.malicious || 0,
-        suspicious: stats.suspicious || 0,
-        harmless: stats.harmless || 0,
-        undetected: stats.undetected || 0,
-        threats: threats.slice(0, 5),
-        totalEngines: Object.keys(results).length,
+        status: isThreat ? 'threat' : 'clean',
+        malicious: extracted.malicious,
+        suspicious: extracted.suspicious,
+        harmless: extracted.harmless,
+        undetected: extracted.undetected,
+        threats: extracted.threats.slice(0, 10),
+        totalEngines: Object.keys(useResults).length,
       };
     } else if (type === 'file') {
-      // Validate file hash
       if (!fileHash || typeof fileHash !== 'string' || !SHA256_RE.test(fileHash)) {
         return new Response(JSON.stringify({ error: 'Ungültiger Datei-Hash.' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Sanitize fileName and fileSize
       const safeName = typeof fileName === 'string' ? fileName.slice(0, 255) : fileHash;
       const safeSize = typeof fileSize === 'string' ? fileSize.slice(0, 50) : '-';
 
       const hashRes = await fetch(`https://www.virustotal.com/api/v3/files/${fileHash}`, {
         headers: { 'x-apikey': VIRUSTOTAL_API_KEY },
       });
-
       const hashText = await hashRes.text();
 
       if (hashRes.status === 404) {
         result = {
-          name: safeName,
-          size: safeSize,
-          type: 'file',
-          status: 'unknown',
-          malicious: 0,
-          suspicious: 0,
-          harmless: 0,
-          undetected: 0,
-          threats: [],
-          totalEngines: 0,
+          name: safeName, size: safeSize, type: 'file', status: 'unknown',
+          malicious: 0, suspicious: 0, harmless: 0, undetected: 0,
+          threats: [], totalEngines: 0,
           message: 'File not found in VirusTotal database. Upload it to virustotal.com for a full scan.',
         };
       } else {
         let hashData;
-        try {
-          hashData = JSON.parse(hashText);
-        } catch {
-          console.error('VT file response not JSON:', hashRes.status, hashText.substring(0, 200));
-          throw new Error('VirusTotal API error');
-        }
-        if (!hashRes.ok) {
-          console.error('VT file lookup failed:', hashRes.status, JSON.stringify(hashData));
-          throw new Error('VirusTotal API error');
-        }
+        try { hashData = JSON.parse(hashText); } catch { throw new Error('VirusTotal API error'); }
+        if (!hashRes.ok) throw new Error('VirusTotal API error');
 
-        const stats = hashData.data?.attributes?.last_analysis_stats || {};
-        const results = hashData.data?.attributes?.last_analysis_results || {};
+        const fileResults = hashData.data?.attributes?.last_analysis_results || {};
+        const extracted = extractThreats(fileResults);
 
-        const threats: string[] = [];
-        for (const [engine, detail] of Object.entries(results)) {
-          const d = detail as any;
-          if (d.category === 'malicious' || d.category === 'suspicious') {
-            threats.push(`${engine}: ${d.result || d.category}`);
-          }
-        }
-
-        const malicious = (stats.malicious || 0) + (stats.suspicious || 0);
         result = {
-          name: safeName,
-          size: safeSize,
-          type: 'file',
-          status: malicious > 0 ? 'threat' : 'clean',
-          malicious: stats.malicious || 0,
-          suspicious: stats.suspicious || 0,
-          harmless: stats.harmless || 0,
-          undetected: stats.undetected || 0,
-          threats: threats.slice(0, 5),
-          totalEngines: Object.keys(results).length,
+          name: safeName, size: safeSize, type: 'file',
+          status: (extracted.malicious + extracted.suspicious) > 0 ? 'threat' : 'clean',
+          malicious: extracted.malicious,
+          suspicious: extracted.suspicious,
+          harmless: extracted.harmless,
+          undetected: extracted.undetected,
+          threats: extracted.threats.slice(0, 10),
+          totalEngines: Object.keys(fileResults).length,
         };
       }
     }
@@ -207,8 +263,7 @@ serve(async (req) => {
   } catch (error: unknown) {
     console.error('Scan error:', error);
     return new Response(JSON.stringify({ error: 'Scan-Dienst vorübergehend nicht verfügbar.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
