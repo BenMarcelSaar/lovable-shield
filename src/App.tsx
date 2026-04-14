@@ -8,12 +8,19 @@ import Index from "./pages/Index";
 import SafeCheck from "./pages/SafeCheck";
 import Tutorial from "./pages/Tutorial";
 import Auth from "./pages/Auth";
+import AgeVerification from "./pages/AgeVerification";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import ResetPassword from "./pages/ResetPassword";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
+
+const AgeGate = ({ children }: { children: React.ReactNode }) => {
+  const verified = localStorage.getItem("sentinel_age_verified") === "true";
+  if (!verified) return <Navigate to="/age-verify" replace />;
+  return <>{children}</>;
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -38,7 +45,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/age-verify" element={<AgeVerification />} />
+          <Route path="/auth" element={<AgeGate><Auth /></AgeGate>} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/check" element={<ProtectedRoute><SafeCheck /></ProtectedRoute>} />
           <Route path="/tutorial" element={<ProtectedRoute><Tutorial /></ProtectedRoute>} />

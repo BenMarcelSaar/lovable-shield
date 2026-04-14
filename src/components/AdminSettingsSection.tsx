@@ -7,6 +7,7 @@ import { Shield, Users, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AdminShutdownPanel from "./AdminShutdownPanel";
 import AdminCodesPanel from "./AdminCodesPanel";
+import AdminVerificationPanel from "./AdminVerificationPanel";
 
 const AdminSettingsSection = () => {
   const { toast } = useToast();
@@ -87,6 +88,7 @@ const AdminSettingsSection = () => {
 
       <AdminShutdownPanel />
       <AdminCodesPanel />
+      <AdminVerificationPanel />
     </div>
   );
 };
