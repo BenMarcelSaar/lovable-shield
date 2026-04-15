@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      community_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_plus: boolean
+          user_id: string
+          username: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_plus?: boolean
+          user_id: string
+          username?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_plus?: boolean
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       plus_codes: {
         Row: {
           code: string
