@@ -30,6 +30,7 @@ const AgeVerification = () => {
 
   // Photo method
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [photoResult, setPhotoResult] = useState<{ allowed: boolean; age: number; confidence: string } | null>(null);
@@ -74,6 +75,16 @@ const AgeVerification = () => {
     return () => clearInterval(interval);
   }, [reqStatus, requestId, navigate]);
 
+  // Auto-start camera when photo method is selected
+  useEffect(() => {
+    if (method === "photo" && !cameraActive && !capturedImage) {
+      startCamera();
+    }
+    return () => {
+      if (method !== "photo") stopCamera();
+    };
+  }, [method]);
+
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
@@ -86,7 +97,7 @@ const AgeVerification = () => {
     } catch {
       setPhotoError("Kamera-Zugriff wurde verweigert.");
     }
-  }, []);
+  }, [cameraActive, capturedImage]);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -218,7 +229,7 @@ const AgeVerification = () => {
                 {/* Camera / Captured */}
                 <div className="aspect-[4/3] bg-secondary rounded-lg overflow-hidden relative">
                   {cameraActive && (
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                    <video ref={videoRef} autoPlay playsInline muted onPlaying={() => setCameraReady(true)} className="w-full h-full object-cover scale-x-[-1]" />
                   )}
                   {capturedImage && !cameraActive && (
                     <img src={capturedImage} alt="Selfie" className="w-full h-full object-cover" />
