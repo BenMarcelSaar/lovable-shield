@@ -75,29 +75,28 @@ const AgeVerification = () => {
     return () => clearInterval(interval);
   }, [reqStatus, requestId, navigate]);
 
-  // Auto-start camera when photo method is selected
-  useEffect(() => {
-    if (method === "photo" && !cameraActive && !capturedImage) {
-      startCamera();
-    }
-    return () => {
-      if (method !== "photo") stopCamera();
-    };
-  }, [method]);
-
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      setCameraReady(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
       setCameraActive(true);
       setPhotoError("");
-    } catch {
-      setPhotoError("Kamera-Zugriff wurde verweigert.");
+    } catch (err: any) {
+      console.error("Camera error:", err);
+      if (err.name === "NotAllowedError") {
+        setPhotoError("Kamera-Zugriff wurde verweigert. Bitte erlaube den Zugriff in deinen Browser-Einstellungen.");
+      } else if (err.name === "NotFoundError") {
+        setPhotoError("Keine Kamera gefunden.");
+      } else {
+        setPhotoError("Kamera konnte nicht gestartet werden.");
+      }
     }
-  }, [cameraActive, capturedImage]);
+  }, []);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
