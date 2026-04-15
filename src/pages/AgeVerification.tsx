@@ -243,9 +243,14 @@ const AgeVerification = () => {
 
                 {/* Camera / Captured */}
                 <div className="aspect-[4/3] bg-secondary rounded-lg overflow-hidden relative">
-                  {cameraActive && (
-                    <video ref={videoRef} autoPlay playsInline muted onPlaying={() => setCameraReady(true)} className="w-full h-full object-cover scale-x-[-1]" />
-                  )}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onPlaying={() => setCameraReady(true)}
+                    className={`w-full h-full object-cover scale-x-[-1] ${cameraActive ? 'block' : 'hidden'}`}
+                  />
                   {capturedImage && !cameraActive && (
                     <img src={capturedImage} alt="Selfie" className="w-full h-full object-cover" />
                   )}
