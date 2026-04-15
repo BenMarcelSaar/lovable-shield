@@ -30,6 +30,7 @@ const AgeVerification = () => {
 
   // Photo method
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [photoResult, setPhotoResult] = useState<{ allowed: boolean; age: number; confidence: string } | null>(null);
