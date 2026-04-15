@@ -98,6 +98,14 @@ const AgeVerification = () => {
     }
   }, []);
 
+  // Stop camera when leaving the page
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
