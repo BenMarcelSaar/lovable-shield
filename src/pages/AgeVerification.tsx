@@ -107,11 +107,27 @@ const AgeVerification = () => {
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current) return;
+    const vw = videoRef.current.videoWidth;
+    const vh = videoRef.current.videoHeight;
+    if (!vw || !vh) {
+      setPhotoError("Kamera noch nicht bereit. Bitte warte einen Moment.");
+      return;
+    }
     const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
+    canvas.width = vw;
+    canvas.height = vh;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      // Mirror the capture to match the mirrored preview
+      ctx.translate(vw, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(videoRef.current, 0, 0);
+    }
     const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+    if (!dataUrl || dataUrl === "data:,") {
+      setPhotoError("Foto konnte nicht aufgenommen werden. Versuche es erneut.");
+      return;
+    }
     setCapturedImage(dataUrl);
     stopCamera();
   }, [stopCamera]);

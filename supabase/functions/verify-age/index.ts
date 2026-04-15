@@ -12,8 +12,8 @@ serve(async (req) => {
 
   try {
     const { image } = await req.json();
-    if (!image || typeof image !== 'string') {
-      return new Response(JSON.stringify({ error: 'Kein Bild bereitgestellt.' }), {
+    if (!image || typeof image !== 'string' || image === 'data:,' || image.length < 100) {
+      return new Response(JSON.stringify({ error: 'Kein gültiges Bild bereitgestellt. Bitte mache ein neues Foto.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
