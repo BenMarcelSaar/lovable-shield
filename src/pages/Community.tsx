@@ -4,7 +4,8 @@ import { useSentinelPlus } from "@/hooks/useSentinelPlus";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, ArrowLeft, Crown, Trash2, Smile } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, MessageCircle, ArrowLeft, Crown, Trash2, Smile, Megaphone, X, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AccountMenu from "@/components/AccountMenu";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +19,14 @@ interface Message {
   content: string;
   is_plus: boolean;
   is_admin: boolean;
+  created_at: string;
+}
+
+interface CommunityEvent {
+  id: string;
+  title: string;
+  content: string;
+  author_name: string;
   created_at: string;
 }
 
@@ -35,6 +44,13 @@ const Community = () => {
   const [showEmojis, setShowEmojis] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Events
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventContent, setEventContent] = useState("");
+  const [eventSending, setEventSending] = useState(false);
+
   // Load username
   useEffect(() => {
     if (!user) return;
@@ -48,7 +64,7 @@ const Community = () => {
       });
   }, [user]);
 
-  // Load messages
+  // Load messages + events
   useEffect(() => {
     const loadMessages = async () => {
       const { data } = await supabase
@@ -58,7 +74,16 @@ const Community = () => {
         .limit(200);
       if (data) setMessages(data as unknown as Message[]);
     };
+    const loadEvents = async () => {
+      const { data } = await supabase
+        .from("community_events")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (data) setEvents(data as unknown as CommunityEvent[]);
+    };
     loadMessages();
+    loadEvents();
   }, []);
 
   // Realtime subscription
@@ -114,6 +139,32 @@ const Community = () => {
     await supabase.from("community_messages").delete().eq("id", id);
   };
 
+  const createEvent = async () => {
+    if (!eventTitle.trim() || !eventContent.trim()) return;
+    setEventSending(true);
+    const { data, error } = await supabase.from("community_events").insert({
+      title: eventTitle.trim(),
+      content: eventContent.trim(),
+      author_id: user!.id,
+      author_name: username || "Owner",
+    } as any).select().single();
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      setEvents((prev) => [data as unknown as CommunityEvent, ...prev]);
+      setEventTitle("");
+      setEventContent("");
+      setShowEventForm(false);
+      toast({ title: "Event erstellt! 📢" });
+    }
+    setEventSending(false);
+  };
+
+  const deleteEvent = async (id: string) => {
+    await supabase.from("community_events").delete().eq("id", id);
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
   const addEmoji = (emoji: string) => {
     setInput((prev) => prev + emoji);
   };
@@ -149,15 +200,85 @@ const Community = () => {
             <MessageCircle className="w-5 h-5 text-primary" />
             <h1 className="text-lg font-bold font-mono text-foreground">COMMUNITY</h1>
           </div>
-          <span className="text-xs text-muted-foreground font-mono ml-auto">
-            {messages.length} Nachrichten
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-mono">
+              {messages.length} Nachrichten
+            </span>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => setShowEventForm(!showEventForm)} className="font-mono text-xs gap-1.5">
+                <Plus className="w-3.5 h-3.5" />
+                Event
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Event creation form */}
+      {showEventForm && isAdmin && (
+        <div className="relative z-10 border-b border-border bg-card/90 backdrop-blur-sm px-4 py-4">
+          <div className="max-w-3xl mx-auto space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold font-mono text-foreground flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-primary" />
+                Neues Event / Update
+              </h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowEventForm(false)} className="h-7 w-7">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <Input
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              placeholder="Titel (z.B. Neues Update v2.0)"
+              maxLength={100}
+              className="font-mono text-sm"
+            />
+            <Textarea
+              value={eventContent}
+              onChange={(e) => setEventContent(e.target.value)}
+              placeholder="Beschreibung..."
+              maxLength={1000}
+              rows={3}
+              className="font-mono text-sm"
+            />
+            <Button onClick={createEvent} disabled={eventSending || !eventTitle.trim() || !eventContent.trim()} className="font-mono text-xs gap-2">
+              <Megaphone className="w-3.5 h-3.5" />
+              Event veröffentlichen
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto relative z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">
+
+          {/* Pinned events */}
+          {events.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {events.map((ev) => (
+                <div key={ev.id} className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 group">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Megaphone className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-sm font-bold font-mono text-primary">{ev.title}</span>
+                    </div>
+                    {isAdmin && (
+                      <button onClick={() => deleteEvent(ev.id)} className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity shrink-0 mt-0.5">
+                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs font-mono text-foreground/80 whitespace-pre-wrap ml-6">{ev.content}</p>
+                  <p className="text-[10px] font-mono text-muted-foreground mt-2 ml-6">
+                    von {ev.author_name} · {formatTime(ev.created_at)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
           {messages.length === 0 && (
             <div className="text-center py-16 space-y-3">
               <MessageCircle className="w-12 h-12 text-muted-foreground/20 mx-auto" />
@@ -174,24 +295,13 @@ const Community = () => {
                   isOwn
                     ? "bg-primary text-primary-foreground rounded-br-md"
                     : "bg-card border border-border rounded-bl-md"
-                } ${msg.is_admin ? "ring-1 ring-primary/40" : ""}`}>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    {msg.is_admin && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <img src={ownerBadge} alt="Owner" className="w-4 h-4 cursor-pointer" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="font-mono text-xs">
-                          Owner
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {msg.is_plus && !msg.is_admin && <Crown className="w-3 h-3 text-yellow-400" />}
+                } ${msg.is_admin ? "ring-1 ring-primary/30" : ""}`}>
+                  <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`text-xs font-bold font-mono ${
                       msg.is_admin
                         ? "text-primary"
                         : msg.is_plus
-                        ? "text-yellow-400"
+                        ? "text-amber-500"
                         : isOwn
                         ? "text-primary-foreground/80"
                         : "text-muted-foreground"
@@ -199,10 +309,16 @@ const Community = () => {
                       {msg.username}
                     </span>
                     {msg.is_admin && (
-                      <span className="text-[9px] font-mono font-bold bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
-                        OWNER
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <img src={ownerBadge} alt="Owner" className="w-3.5 h-3.5 cursor-pointer inline-block" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="font-mono text-xs bg-card border border-border">
+                          Owner
+                        </TooltipContent>
+                      </Tooltip>
                     )}
+                    {msg.is_plus && !msg.is_admin && <Crown className="w-3 h-3 text-amber-500" />}
                     {(isOwn || isAdmin) && (
                       <button onClick={() => deleteMessage(msg.id)} className="ml-auto opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity">
                         <Trash2 className="w-3 h-3" />
