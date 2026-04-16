@@ -239,6 +239,17 @@ const AgeVerification = () => {
                 <p className="text-[10px] text-muted-foreground font-mono text-center mt-4">
                   Wähle eine Methode zur Altersverifikation
                 </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    localStorage.setItem(VERIFIED_KEY, "true");
+                    navigate("/auth", { replace: true });
+                  }}
+                  className="w-full text-xs font-mono text-muted-foreground hover:text-foreground mt-2"
+                >
+                  Überspringen →
+                </Button>
               </motion.div>
             )}
 
