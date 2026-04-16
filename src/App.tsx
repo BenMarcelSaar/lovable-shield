@@ -23,6 +23,24 @@ const AgeGate = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const CommunityAgeGate = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const isGuest = localStorage.getItem("sentinel_guest") === "true";
+  const verified = localStorage.getItem("sentinel_age_verified") === "true";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!verified) return <Navigate to="/age-verify" replace />;
+  if (!user && !isGuest) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+};
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const isGuest = localStorage.getItem("sentinel_guest") === "true";
@@ -47,12 +65,12 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/age-verify" element={<AgeVerification />} />
-          <Route path="/auth" element={<AgeGate><Auth /></AgeGate>} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/check" element={<ProtectedRoute><SafeCheck /></ProtectedRoute>} />
           <Route path="/tutorial" element={<ProtectedRoute><Tutorial /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+          <Route path="/community" element={<CommunityAgeGate><Community /></CommunityAgeGate>} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
