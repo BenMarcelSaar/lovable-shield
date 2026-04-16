@@ -55,6 +55,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_admin: boolean
           is_plus: boolean
           user_id: string
           username: string
@@ -63,6 +64,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_admin?: boolean
           is_plus?: boolean
           user_id: string
           username?: string
@@ -71,6 +73,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_admin?: boolean
           is_plus?: boolean
           user_id?: string
           username?: string
