@@ -9,6 +9,7 @@ import AdminShutdownPanel from "./AdminShutdownPanel";
 import AdminCodesPanel from "./AdminCodesPanel";
 import AdminVerificationPanel from "./AdminVerificationPanel";
 import AdminChatBansPanel from "./AdminChatBansPanel";
+import AdminAiAndWordsPanel from "./AdminAiAndWordsPanel";
 
 const AdminSettingsSection = () => {
   const { toast } = useToast();
@@ -91,6 +92,7 @@ const AdminSettingsSection = () => {
       <AdminCodesPanel />
       <AdminVerificationPanel />
       <AdminChatBansPanel />
+      <AdminAiAndWordsPanel />
     </div>
   );
 };
