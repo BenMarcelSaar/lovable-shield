@@ -82,6 +82,24 @@ const Community = () => {
   const [banSeconds, setBanSeconds] = useState(0);
   const [banReason, setBanReason] = useState("");
 
+  // DB-driven banned words
+  const [bannedWords, setBannedWords] = useState<BannedWordRule[]>([]);
+
+  useEffect(() => {
+    const loadWords = async () => {
+      const { data } = await supabase
+        .from("banned_words" as any)
+        .select("word, ban_seconds");
+      if (data) setBannedWords(data as unknown as BannedWordRule[]);
+    };
+    loadWords();
+    const channel = supabase
+      .channel("banned-words-watch")
+      .on("postgres_changes", { event: "*", schema: "public", table: "banned_words" }, () => loadWords())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   // Live timer for own ban countdown
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -192,23 +210,27 @@ const Community = () => {
       return;
     }
 
-    // Bad word check (Owner/Admins sind ausgenommen)
-    if (!isAdmin && containsBadContent(input)) {
-      const until = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day
-      await supabase.from("chat_bans" as any).insert({
-        user_id: user.id,
-        banned_until: until.toISOString(),
-        reason: "Unangemessene Sprache (Auto-Moderation)",
-        banned_by: null,
-      } as any);
-      setMyBanUntil(until.getTime());
-      setInput("");
-      toast({
-        title: "🚫 Du wurdest gesperrt",
-        description: "Unangemessene Sprache. Chat-Sperre: 1 Tag.",
-        variant: "destructive",
-      });
-      return;
+    // Bad word check (Owner/Admins sind ausgenommen) - DB-driven mit individueller Ban-Dauer
+    if (!isAdmin) {
+      const hit = findBannedWord(input, bannedWords);
+      if (hit) {
+        const until = new Date(Date.now() + hit.ban_seconds * 1000);
+        await supabase.from("chat_bans" as any).insert({
+          user_id: user.id,
+          banned_until: until.toISOString(),
+          reason: `Verbotenes Wort: "${hit.word}" (Auto-Moderation)`,
+          banned_by: null,
+        } as any);
+        setMyBanUntil(until.getTime());
+        setMyBanReason(`Verbotenes Wort: "${hit.word}"`);
+        setInput("");
+        toast({
+          title: "🚫 Du wurdest gesperrt",
+          description: `Verbotenes Wort erkannt. Sperre bis ${until.toLocaleString("de-DE")}.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setSending(true);
