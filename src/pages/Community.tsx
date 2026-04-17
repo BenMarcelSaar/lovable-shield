@@ -191,8 +191,8 @@ const Community = () => {
       return;
     }
 
-    // Bad word check
-    if (containsBadContent(input)) {
+    // Bad word check (Owner/Admins sind ausgenommen)
+    if (!isAdmin && containsBadContent(input)) {
       const until = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day
       await supabase.from("chat_bans" as any).insert({
         user_id: user.id,
