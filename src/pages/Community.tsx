@@ -103,19 +103,22 @@ const Community = () => {
 
   // Load own active ban
   const refreshMyBan = useCallback(async () => {
-    if (!user) { setMyBanUntil(null); return; }
+    if (!user) { setMyBanUntil(null); setMyBanReason(null); return; }
     const { data } = await supabase
       .from("chat_bans" as any)
-      .select("banned_until")
+      .select("banned_until, reason")
       .eq("user_id", user.id)
       .order("banned_until", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (data && (data as any).banned_until) {
       const until = new Date((data as any).banned_until).getTime();
-      setMyBanUntil(until > Date.now() ? until : null);
+      const active = until > Date.now();
+      setMyBanUntil(active ? until : null);
+      setMyBanReason(active ? ((data as any).reason ?? null) : null);
     } else {
       setMyBanUntil(null);
+      setMyBanReason(null);
     }
   }, [user]);
 
