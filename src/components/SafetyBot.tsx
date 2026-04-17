@@ -309,7 +309,14 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
             </div>
 
             <div className="border-t border-border p-3">
-              {isGuest ? (
+              {!aiEnabled ? (
+                <div className="flex items-center gap-2 text-muted-foreground bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2.5">
+                  <PowerOff className="w-4 h-4 shrink-0 text-destructive" />
+                  <p className="text-xs font-mono">
+                    Sentinel AI ist aktuell deaktiviert.
+                  </p>
+                </div>
+              ) : isGuest ? (
                 <div className="flex items-center gap-2 text-muted-foreground bg-secondary/50 rounded-lg px-3 py-2.5">
                   <Lock className="w-4 h-4 shrink-0" />
                   <p className="text-xs font-mono">
