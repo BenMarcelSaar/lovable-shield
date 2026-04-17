@@ -73,6 +73,7 @@ const Community = () => {
 
   // Bans
   const [myBanUntil, setMyBanUntil] = useState<number | null>(null);
+  const [myBanReason, setMyBanReason] = useState<string | null>(null);
   const [banDialog, setBanDialog] = useState<{ userId: string; username: string } | null>(null);
   const [banDays, setBanDays] = useState(1);
   const [banHours, setBanHours] = useState(0);
@@ -102,19 +103,22 @@ const Community = () => {
 
   // Load own active ban
   const refreshMyBan = useCallback(async () => {
-    if (!user) { setMyBanUntil(null); return; }
+    if (!user) { setMyBanUntil(null); setMyBanReason(null); return; }
     const { data } = await supabase
       .from("chat_bans" as any)
-      .select("banned_until")
+      .select("banned_until, reason")
       .eq("user_id", user.id)
       .order("banned_until", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (data && (data as any).banned_until) {
       const until = new Date((data as any).banned_until).getTime();
-      setMyBanUntil(until > Date.now() ? until : null);
+      const active = until > Date.now();
+      setMyBanUntil(active ? until : null);
+      setMyBanReason(active ? ((data as any).reason ?? null) : null);
     } else {
       setMyBanUntil(null);
+      setMyBanReason(null);
     }
   }, [user]);
 
@@ -435,13 +439,13 @@ const Community = () => {
             )}
             {messages.map((msg) => {
               const isOwn = user?.id === msg.user_id;
-              const nameColor = msg.is_admin
+              const nameColor = isOwn
+                ? "text-primary-foreground"
+                : msg.is_admin
                 ? "text-primary"
                 : msg.is_plus
                 ? "text-amber-500"
-                : isOwn
-                ? "text-primary-foreground/90"
-                : "text-foreground/80";
+                : "text-foreground";
               return (
                 <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"} group`}>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm transition-all ${
@@ -535,13 +539,18 @@ const Community = () => {
                 Du musst angemeldet sein um zu schreiben. 🔒
               </p>
             ) : isBanned ? (
-              <div className="flex items-center gap-3 bg-destructive/10 border border-destructive/40 rounded-lg px-4 py-3">
-                <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
-                <div className="flex-1">
+              <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/40 rounded-lg px-4 py-3">
+                <ShieldAlert className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-1">
                   <p className="text-sm font-bold font-mono text-destructive">Du bist vom Chat gesperrt</p>
                   <p className="text-xs font-mono text-muted-foreground">
                     Verbleibend: <span className="text-destructive font-bold">{formatRemaining(myBanUntil!)}</span>
                   </p>
+                  {myBanReason && (
+                    <p className="text-xs font-mono text-foreground/80">
+                      Grund: <span className="text-foreground font-semibold">{myBanReason}</span>
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
