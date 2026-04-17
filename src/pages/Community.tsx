@@ -73,6 +73,7 @@ const Community = () => {
 
   // Bans
   const [myBanUntil, setMyBanUntil] = useState<number | null>(null);
+  const [myBanReason, setMyBanReason] = useState<string | null>(null);
   const [banDialog, setBanDialog] = useState<{ userId: string; username: string } | null>(null);
   const [banDays, setBanDays] = useState(1);
   const [banHours, setBanHours] = useState(0);
