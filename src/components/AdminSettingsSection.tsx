@@ -90,6 +90,7 @@ const AdminSettingsSection = () => {
       <AdminShutdownPanel />
       <AdminCodesPanel />
       <AdminVerificationPanel />
+      <AdminChatBansPanel />
     </div>
   );
 };
