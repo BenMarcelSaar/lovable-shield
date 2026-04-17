@@ -268,6 +268,17 @@ const Community = () => {
 
   const confirmBan = async () => {
     if (!banDialog) return;
+    // Owner-Schutz: Admins/Owner können nicht gebannt werden
+    const { data: targetProfile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", banDialog.userId)
+      .single();
+    if (targetProfile?.is_admin) {
+      toast({ title: "Nicht erlaubt", description: "Owner können nicht gebannt werden.", variant: "destructive" });
+      setBanDialog(null);
+      return;
+    }
     const totalMs =
       banDays * 86400000 + banHours * 3600000 + banMinutes * 60000 + banSeconds * 1000;
     if (totalMs <= 0) {
