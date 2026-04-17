@@ -439,13 +439,13 @@ const Community = () => {
             )}
             {messages.map((msg) => {
               const isOwn = user?.id === msg.user_id;
-              const nameColor = msg.is_admin
+              const nameColor = isOwn
+                ? "text-primary-foreground"
+                : msg.is_admin
                 ? "text-primary"
                 : msg.is_plus
                 ? "text-amber-500"
-                : isOwn
-                ? "text-primary-foreground/90"
-                : "text-foreground/80";
+                : "text-foreground";
               return (
                 <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"} group`}>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm transition-all ${
