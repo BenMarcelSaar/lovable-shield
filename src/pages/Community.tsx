@@ -181,7 +181,7 @@ const Community = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const isBanned = myBanUntil !== null && myBanUntil > now;
+  const isBanned = !isAdmin && myBanUntil !== null && myBanUntil > now;
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || !user || sending) return;
