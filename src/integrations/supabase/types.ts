@@ -50,6 +50,51 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_settings: {
+        Row: {
+          ai_enabled: boolean
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ai_enabled?: boolean
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ai_enabled?: boolean
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      banned_words: {
+        Row: {
+          ban_seconds: number
+          created_at: string
+          created_by: string | null
+          id: string
+          word: string
+        }
+        Insert: {
+          ban_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          word: string
+        }
+        Update: {
+          ban_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          word?: string
+        }
+        Relationships: []
+      }
       chat_bans: {
         Row: {
           banned_by: string | null
