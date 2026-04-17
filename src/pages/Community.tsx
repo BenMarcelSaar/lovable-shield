@@ -33,23 +33,24 @@ interface CommunityEvent {
 
 const EMOJI_LIST = ["😀", "😂", "🔥", "❤️", "👍", "👎", "🛡️", "⚡", "🎉", "💀", "😎", "🤔", "👀", "✅", "❌", "🚀"];
 
-// Bad words filter (DE + EN)
-const BAD_WORDS = [
-  // German
-  "fick", "ficken", "fck", "scheiße", "scheisse", "scheis", "hurensohn", "wichser", "arschloch",
-  "missgeburt", "bastard", "hure", "fotze", "schwuchtel", "spast", "spasti", "schlampe",
-  "kanake", "neger", "judensau", "nazi", "heil hitler", "sieg heil",
-  "ich bring dich um", "ich töte dich", "du sollst sterben", "verreck",
-  // English
-  "fuck", "fucking", "fck", "shit", "bitch", "asshole", "ass hole", "nigger", "nigga",
-  "faggot", "fag", "cunt", "motherfucker", "dick", "pussy", "retard", "whore", "slut",
-  "kill yourself", "kys", "rape", "raping",
-];
+interface BannedWordRule {
+  word: string;
+  ban_seconds: number;
+}
 
-function containsBadContent(text: string): boolean {
+// Returns the matching rule (DB-driven) or null
+function findBannedWord(text: string, rules: BannedWordRule[]): BannedWordRule | null {
+  if (!rules.length) return null;
   const lower = text.toLowerCase().replace(/[^a-zäöüß0-9\s]/g, " ");
   const padded = ` ${lower} `;
-  return BAD_WORDS.some((w) => padded.includes(` ${w} `) || padded.includes(`${w} `) || padded.includes(` ${w}`));
+  for (const rule of rules) {
+    const w = rule.word.toLowerCase().trim();
+    if (!w) continue;
+    if (padded.includes(` ${w} `) || padded.includes(`${w} `) || padded.includes(` ${w}`)) {
+      return rule;
+    }
+  }
+  return null;
 }
 
 const Community = () => {
