@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import AdminShutdownPanel from "./AdminShutdownPanel";
 import AdminCodesPanel from "./AdminCodesPanel";
 import AdminVerificationPanel from "./AdminVerificationPanel";
+import AdminChatBansPanel from "./AdminChatBansPanel";
 
 const AdminSettingsSection = () => {
   const { toast } = useToast();
