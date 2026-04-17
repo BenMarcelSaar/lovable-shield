@@ -463,7 +463,7 @@ const Community = () => {
                         </Tooltip>
                       )}
                       <div className="ml-auto flex items-center gap-1.5">
-                        {isAdmin && !isOwn && (
+                        {isAdmin && !isOwn && !msg.is_admin && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
