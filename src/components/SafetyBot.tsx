@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, Lock, Crown } from "lucide-react";
+import { X, Send, Loader2, Lock, Crown, PowerOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSentinelPlus } from "@/hooks/useSentinelPlus";
+import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -60,11 +61,31 @@ const SafetyBot = ({ onBan }: { onBan?: (until: number) => void }) => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Poll AI enabled state
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase.from("ai_settings" as any).select("ai_enabled").limit(1).maybeSingle();
+      if (data) setAiEnabled((data as any).ai_enabled !== false);
+    };
+    load();
+    const channel = supabase
+      .channel("ai-settings-watch")
+      .on("postgres_changes", { event: "*", schema: "public", table: "ai_settings" }, (payload) => {
+        const newRow = payload.new as any;
+        if (newRow && typeof newRow.ai_enabled === "boolean") {
+          setAiEnabled(newRow.ai_enabled);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const send = async () => {
     const text = input.trim();
