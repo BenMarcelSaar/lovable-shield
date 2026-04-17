@@ -34,6 +34,20 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
+    // Check global AI toggle
+    const { data: aiSettings } = await supabaseAdmin
+      .from('ai_settings')
+      .select('ai_enabled')
+      .limit(1)
+      .maybeSingle();
+
+    if (aiSettings && aiSettings.ai_enabled === false) {
+      return new Response(
+        JSON.stringify({ error: "🛑 Sentinel AI ist aktuell deaktiviert. Bitte versuche es später erneut." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let isPlus = false;
     if (authHeader) {
       const jwt = authHeader.replace('Bearer ', '');
