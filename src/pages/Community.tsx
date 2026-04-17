@@ -248,7 +248,7 @@ const Community = () => {
       setShowEmojis(false);
     }
     setSending(false);
-  }, [input, user, username, isPlus, isAdmin, sending, toast, isBanned]);
+  }, [input, user, username, isPlus, isAdmin, sending, toast, isBanned, bannedWords]);
 
   const deleteMessage = async (id: string) => {
     await supabase.from("community_messages").delete().eq("id", id);
